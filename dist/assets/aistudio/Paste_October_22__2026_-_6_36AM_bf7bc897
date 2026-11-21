@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gabee Studio</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        ivory: '#FBF9F5',
+                        brandBrown: '#3E2723',
+                        brandGold: '#D4AF37',
+                        brandGoldLight: '#F3E5AB',
+                        softMaroon: '#4A2C2A'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Cinzel Decorative y Montserrat -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #FBF9F5;
+            color: #3E2723;
+        }
+        .cinzel {
+            font-family: 'Cinzel Decorative', serif;
+        }
+        /* Patrón de abejas dorado translúcido (restringido estrictamente a Header, Footer y barras modales) */
+        .bee-pattern-bg {
+            background-color: rgba(212, 175, 55, 0.08);
+            background-image: radial-gradient(rgba(212, 175, 55, 0.15) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        /* Efecto Glassmorphism y Hover de lujo (brillo dorado tenue) */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            transition: all 0.3s ease;
+        }
+        .glass-panel:hover {
+            border-color: #D4AF37;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+        }
+        /* Estilos del Flipbook (Libro Interactivo) */
+        .book-container {
+            width: 100%;
+            max-width: 800px;
+            height: 480px;
+            position: relative;
+            background: #FFFDF9;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body class="bg-ivory text-brandBrown min-h-screen flex flex-col justify-between">
+
+    <!-- HEADER / NAVEGACIÓN (CON PATRÓN DE ABEJAS) -->
+    <header class="sticky top-0 z-40 bee-pattern-bg border-b border-brandGold/30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <!-- LOGO -->
+            <div class="flex items-center space-x-3 bg-white/80 px-4 py-2 rounded-xl border border-brandGold/30">
+                <span class="cinzel text-xl font-bold tracking-wider text-brandBrown">Gabee</span>
+                <div>
+                    <h1 class="cinzel text-lg font-bold tracking-widest text-brandBrown leading-none">GABEE STUDIO</h1>
+                    <p class="text-[9px] uppercase tracking-wider text-brandGold font-semibold">DONDE EL AMOR Y EL ARTE SE ENCUENTRAN</p>
+                </div>
+            </div>
+
+            <!-- NAVEGACIÓN PRINCIPAL -->
+            <nav class="hidden md:flex items-center space-x-6 text-sm font-medium">
+                <a href="#inicio" class="hover:text-brandGold transition">INICIO</a>
+                <a href="#servicios" class="hover:text-brandGold transition">SERVICIOS</a>
+                <a href="#presson" class="hover:text-brandGold transition">PRESS ON</a>
+                <a href="#cursos" class="hover:text-brandGold transition">CURSOS</a>
+            </nav>
+
+            <!-- BOTÓN ADMIN -->
+            <div>
+                <button onclick="toggleAdminPanel()" class="px-4 py-2 text-xs font-semibold tracking-wider border border-brandBrown/30 rounded-lg hover:bg-brandBrown hover:text-white transition flex items-center gap-2">
+                    <i class="fa-solid fa-lock"></i> ADMIN
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="flex-grow">
+        <!-- HERO / SECCIÓN INICIAL -->
+        <section id="inicio" class="py-16 px-4 text-center max-w-4xl mx-auto">
+            <div class="mb-6 inline-block p-3 rounded-full bg-brandGold/10 border border-brandGold/30">
+                <i class="fa-solid fa-gem text-brandGold text-2xl"></i>
+            </div>
+            <h2 class="cinzel text-4xl sm:text-5xl font-bold text-brandBrown mb-4">Gabee</h2>
+            <p class="cinzel text-2xl sm:text-3xl text-brandBrown mb-8 font-light">DONDE EL AMOR <br>Y EL ARTE SE ENCUENTRAN</p>
+            <p class="text-xs text-brandBrown/70 uppercase tracking-widest mb-10">lima, perú • @gabeenailsart • pedidos & servicios</p>
+
+            <!-- BOTONES INTERACTIVOS (TÉRMINOS Y BENEFICIOS - LIBROS REALISTAS) -->
+            <div class="flex flex-col sm:flex-row justify-center gap-4 max-w-lg mx-auto">
+                <button onclick="openFlipbook('terms')" class="flex-1 py-3 px-6 bg-white border border-brandGold/40 rounded-xl shadow-sm hover:shadow-md hover:border-brandGold transition text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-book-open text-brandGold"></i> Términos y Condiciones
+                </button>
+                <button onclick="openFlipbook('benefits')" class="flex-1 py-3 px-6 bg-white border border-brandGold/40 rounded-xl shadow-sm hover:shadow-md hover:border-brandGold transition text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-star text-brandGold"></i> Beneficios en Gabee Studio
+                </button>
+            </div>
+        </section>
+
+        <!-- SECCIÓN NUESTROS SERVICIOS -->
+        <section id="servicios" class="py-12 px-4 max-w-7xl mx-auto">
+            <div class="flex justify-between items-center mb-8 border-b border-brandBrown/10 pb-4">
+                <div>
+                    <h3 class="cinzel text-2xl font-bold">Nuestros Servicios</h3>
+                    <p class="text-xs text-brandBrown/70 uppercase tracking-wider">Sistema profesional de aplicación</p>
+                </div>
+            </div>
+
+            <!-- GRID DE SERVICIOS -->
+            <div id="services-grid" class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Softgel -->
+                <div class="glass-panel p-6 rounded-2xl shadow-sm flex flex-col justify-between">
+                    <div>
+                        <img src="https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&q=80&w=600" alt="Softgel" class="w-full h-48 object-cover rounded-xl mb-4 service-img">
+                        <h4 class="cinzel text-xl font-bold mb-2 service-title">SOFTGEL</h4>
+                        <p class="text-xs text-brandBrown/80 mb-4 service-desc">Tips de gel flexible prensado y adherido con base coat curado en cabina UV. Máxima ligereza, flexibilidad y acabado ultranatural sin olor a monómero.</p>
+                    </div>
+                    <div>
+                        <div class="text-xs font-semibold text-brandGold mb-4 service-price">DESDE S/. 60</div>
+                        <button onclick="openBooking('Softgel')" class="w-full py-2 bg-brandBrown text-white rounded-xl text-xs font-semibold uppercase tracking-wider hover:bg-brandGold transition">Personalizar Set</button>
+                    </div>
+                </div>
+                <!-- Polygel -->
+                <div class="glass-panel p-6 rounded-2xl shadow-sm flex flex-col justify-between">
+                    <div>
+                        <img src="https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&q=80&w=600" alt="Polygel" class="w-full h-48 object-cover rounded-xl mb-4 service-img">
+                        <h4 class="cinzel text-xl font-bold mb-2 service-title">POLYMEL / POLYGEL</h4>
+                        <p class="text-xs text-brandBrown/80 mb-4 service-desc">Fórmula híbrida que une la durabilidad del acrílico con la flexibilidad del gel. Esculpido perfecto con dual forms o molde sin dañar la lámina ungueal.</p>
+                    </div>
+                    <div>
+                        <div class="text-xs font-semibold text-brandGold mb-4 service-price">DESDE S/. 60</div>
+                        <button onclick="openBooking('Polygel')" class="w-full py-2 bg-brandBrown text-white rounded-xl text-xs font-semibold uppercase tracking-wider hover:bg-brandGold transition">Personalizar Set</button>
+                    </div>
+                </div>
+                <!-- Uñas Acrílicas -->
+                <div class="glass-panel p-6 rounded-2xl shadow-sm flex flex-col justify-between">
+                    <div>
+                        <img src="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=600" alt="Acrílicas" class="w-full h-48 object-cover rounded-xl mb-4 service-img">
+                        <h4 class="cinzel text-xl font-bold mb-2 service-title">UÑAS ACRÍLICAS</h4>
+                        <p class="text-xs text-brandBrown/80 mb-4 service-desc">Sistema tradicional de alta resistencia y durabilidad excepcional. Ideal para extensiones largas, estructuras complejas y diseños personalizados sólidos.</p>
+                    </div>
+                    <div>
+                        <div class="text-xs font-semibold text-brandGold mb-4 service-price">DESDE S/. 80</div>
+                        <button onclick="openBooking('Uñas Acrílicas')" class="w-full py-2 bg-brandBrown text-white rounded-xl text-xs font-semibold uppercase tracking-wider hover:bg-brandGold transition">Personalizar Set</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN PRESS ON NAILS -->
+        <section id="presson" class="py-12 px-4 max-w-7xl mx-auto">
+            <div class="text-center mb-8">
+                <div class="text-xs uppercase tracking-widest text-brandGold mb-2">✦ Press On Nails ✦</div>
+                <h3 class="cinzel text-3xl font-bold mb-2">Sets Prediseñados Reutilizables</h3>
+                <p class="text-xs text-brandBrown/70 max-w-md mx-auto mb-6">Uñas artesanales reutilizables creadas a mano a tu medida exacta. Listas para colocar en casa en solo 10 minutos.</p>
+                
+                <!-- DOS BOTONES PRINCIPALES SEPARADOS -->
+                <div class="flex flex-col sm:flex-row justify-center gap-4 max-w-md mx-auto">
+                    <button onclick="openCatalogModal()" class="flex-1 py-3 px-6 bg-brandBrown text-white rounded-xl text-xs font-semibold uppercase tracking-wider hover:bg-brandGold transition shadow-sm">
+                        <i class="fa-solid fa-box-archive mr-2"></i> Catálogo Press On
+                    </button>
+                    <button onclick="openCustomOrderModal()" class="flex-1 py-3 px-6 bg-white border border-brandGold/50 text-brandBrown rounded-xl text-xs font-semibold uppercase tracking-wider hover:border-brandGold transition shadow-sm">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-2 text-brandGold"></i> Pedido personalizado
+                    </button>
+                </div>
+            </div>
+
+            <div id="presson-grid" class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mt-8">
+                <div class="glass-panel p-6 rounded-2xl shadow-sm flex flex-col justify-between cursor-pointer" onclick="openCatalogModal()">
+                    <div>
+                        <img src="https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&q=80&w=600" alt="Press On 1" class="w-full h-56 object-cover rounded-xl mb-4 presson-img">
+                        <h4 class="cinzel text-lg font-bold mb-1 presson-title">SET I · VELVET CAT-EYE & CROMO</h4>
+                        <p class="text-xs text-brandBrown/80 mb-4 presson-desc">Diseños magnéticos y acabados metálicos en tendencia.</p>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-semibold text-brandGold presson-price">S/. 80.00</span>
+                        <span class="text-xs font-semibold text-brandBrown underline">Ver detalles y comprar</span>
+                    </div>
+                </div>
+                <div class="glass-panel p-6 rounded-2xl shadow-sm flex flex-col justify-between cursor-pointer" onclick="openCatalogModal()">
+                    <div>
+                        <img src="https://images.unsplash.com/photo-1632345031435-8727f6c97d34?auto=format&fit=crop&q=80&w=600" alt="Press On 2" class="w-full h-56 object-cover rounded-xl mb-4 presson-img">
+                        <h4 class="cinzel text-lg font-bold mb-1 presson-title">SET II · 3D GEL SCULPTED</h4>
+                        <p class="text-xs text-brandBrown/80 mb-4 presson-desc">Figuras en relieve y detalles artísticos hechos a mano.</p>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-semibold text-brandGold presson-price">S/. 60.00</span>
+                        <span class="text-xs font-semibold text-brandBrown underline">Ver detalles y comprar</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- FOOTER / PIE DE PÁGINA (CON PATRÓN DE ABEJAS) -->
+    <footer class="bee-pattern-bg border-t border-brandGold/30 mt-20 pt-12 pb-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+            <!-- LOGO & INFO -->
+            <div class="space-y-3">
+                <div class="flex items-center space-x-3 bg-white/80 p-3 rounded-xl border border-brandGold/30 inline-flex">
+                    <span class="cinzel text-lg font-bold tracking-wider text-brandBrown">Gabee</span>
+                    <div>
+                        <h2 class="cinzel text-sm font-bold tracking-widest text-brandBrown leading-none">GABEE STUDIO</h2>
+                        <p class="text-[8px] uppercase tracking-wider text-brandGold font-semibold">DONDE EL AMOR Y EL ARTE SE ENCUENTRAN</p>
+                    </div>
+                </div>
+                <p class="text-xs text-brandBrown/80">Studio Profesional en Lima, Perú.</p>
+                <p class="text-[10px] text-brandBrown/60 uppercase">BEETOOLS E.I.R.L. • RUC: 20614757257</p>
+            </div>
+
+            <!-- REDES SOCIALES -->
+            <div class="text-center">
+                <h4 class="cinzel text-xs font-bold tracking-widest uppercase mb-4 text-brandBrown">Síguenos en nuestras redes sociales</h4>
+                <div class="flex justify-center space-x-4 text-brandBrown">
+                    <a href="https://www.facebook.com/gabeenailsart/about/" target="_blank" class="w-9 h-9 rounded-full bg-white border border-brandGold/30 flex items-center justify-center hover:bg-brandGold hover:text-white transition"><i class="fa-brands fa-facebook-f text-xs"></i></a>
+                    <a href="https://www.instagram.com/gabeenailsart/" target="_blank" class="w-9 h-9 rounded-full bg-white border border-brandGold/30 flex items-center justify-center hover:bg-brandGold hover:text-white transition"><i class="fa-brands fa-instagram text-xs"></i></a>
+                    <a href="https://www.youtube.com/@GabeenailsArt" target="_blank" class="w-9 h-9 rounded-full bg-white border border-brandGold/30 flex items-center justify-center hover:bg-brandGold hover:text-white transition"><i class="fa-brands fa-youtube text-xs"></i></a>
+                    <a href="https://www.threads.net/@gabeenailsart" target="_blank" class="w-9 h-9 rounded-full bg-white border border-brandGold/30 flex items-center justify-center hover:bg-brandGold hover:text-white transition"><i class="fa-solid fa-at text-xs"></i></a>
+                </div>
+            </div>
+
+            <!-- LIBRO DE RECLAMACIONES -->
+            <div class="flex justify-md-end justify-center">
+                <div class="glass-panel p-4 rounded-xl flex items-center space-x-3 border border-brandGold/30 max-w-xs">
+                    <i class="fa-solid fa-book text-brandGold text-2xl"></i>
+                    <div>
+                        <h5 class="cinzel text-[10px] font-bold uppercase">Libro de Reclamaciones</h5>
+                        <p class="text-[9px] text-brandBrown/70">Conforme a Ley N° 29571 - Indecopi</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 pt-4 border-t border-brandBrown/10 text-center text-[10px] text-brandBrown/50">
+            BEETOOLS EIRL • DERECHOS RESERVADOS © 2026
+        </div>
+    </footer>
+
+    <!-- VENTANA MODAL DE CATÁLOGO PRESS ON (CON VISOR DE FOTOS, TALLAS Y KITS) -->
+    <div id="catalog-modal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-ivory w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-brandGold/30 flex flex-col max-h-[95vh]">
+            <!-- HEADER CON ABEJITAS -->
+            <div class="bee-pattern-bg px-6 py-4 border-b border-brandGold/30 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <span class="cinzel text-xs font-bold text-brandBrown">Gabee</span>
+                    <span class="text-xs uppercase tracking-wider text-brandBrown">CATÁLOGO PRESS ON · GABEE STUDIO</span>
+                </div>
+                <button onclick="closeCatalogModal()" class="w-8 h-8 rounded-full bg-white/80 flex items-center justify-center text-brandBrown hover:bg-brandGold hover:text-white transition"><i class="fa-solid fa-xmark text-sm"></i></button>
+            </div>
+
+            <!-- CONTENIDO DE LA MODAL (FONDO MARRONCITO CLARO TRANSLÚCIDO) -->
+            <div class="p-6 overflow-y-auto flex-grow space-y-6 bg-[#F5EFEB]/80">
+                <!-- VISOR DE FOTOS DINÁMICO CON FLECHITAS -->
+                <div class="relative bg-white p-2 rounded-xl border border-brandGold/30 shadow-sm">
+                    <img id="catalog-active-img" src="https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&q=80&w=600" alt="Set Preview" class="w-full h-64 object-cover rounded-lg">
+                    <button onclick="prevCatalogPhoto()" class="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 rounded-full shadow flex items-center justify-center text-brandBrown hover:bg-brandGold hover:text-white transition"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                    <button onclick="nextCatalogPhoto()" class="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 rounded-full shadow flex items-center justify-center text-brandBrown hover:bg-brandGold hover:text-white transition"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+                </div>
+
+                <!-- DETALLES DEL DISEÑO -->
+                <div class="text-center space-y-1">
+                    <h4 id="catalog-item-name" class="cinzel text-xl font-bold">SET I · VELVET CAT-EYE & CROMO</h4>
+                    <p id="catalog-item-price" class="text-sm font-semibold text-brandGold">S/. 80.00</p>
+                </div>
+
+                <!-- TIPO DE PUNTA Y TALLAS (SOLO LETRAS: XS, S, M, L) -->
+                <div class="space-y-4 bg-white/90 p-4 rounded-xl border border-brandGold/20">
+                    <div>
+                        <label class="text-xs font-semibold uppercase tracking-wider text-brandBrown block mb-2">1. Selecciona el Tipo de Punta</label>
+                        <select id="tip-type-select" onchange="updateSizeChart()" class="w-full p-2.5 text-xs bg-ivory border border-brandBrown/20 rounded-xl focus:border-brandGold">
+                            <option value="almendra">Punta Almendra</option>
+                            <option value="stiletto">Punta Stiletto</option>
+                            <option value="coffin">Punta Coffin</option>
+                            <option value="square">Punta Square (Cuadrada)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-xs font-semibold uppercase tracking-wider text-brandBrown">2. Selecciona tu Talla</label>
+                            <button onclick="openSizeChartModal()" class="text-[10px] text-brandGold underline font-semibold">Ver tabla de milímetros</button>
+                        </div>
+                        <div class="grid grid-cols-4 gap-2">
+                            <button onclick="selectSize('XS')" id="btn-size-XS" class="py-2.5 rounded-xl border border-brandBrown/20 text-xs font-bold transition hover:border-brandGold">XS</button>
+                            <button onclick="selectSize('S')" id="btn-size-S" class="py-2.5 rounded-xl border border-brandBrown/20 text-xs font-bold transition hover:border-brandGold">S</button>
+                            <button onclick="selectSize('M')" id="btn-size-M" class="py-2.5 rounded-xl border border-brandBrown/20 text-xs font-bold transition hover:border-brandGold">M</button>
+                            <button onclick="selectSize('L')" id="btn-size-L" class="py-2.5 rounded-xl border border-brandBrown/20 text-xs font-bold transition hover:border-brandGold">L</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SELECCIÓN DE KITS DE APLICACIÓN CON DESCUENTO AUTOMÁTICO -->
+                <div class="space-y-3 bg-white/90 p-4 rounded-xl border border-brandGold/20">
+                    <label class="text-xs font-semibold uppercase tracking-wider text-brandBrown block">3. Kit de Aplicación Incluido / Opcional</label>
+                    <div id="kit-auto-banner" class="p-3 bg-brandGold/10 rounded-xl border border-brandGold/40 text-[11px] text-brandBrown">
+                        🎉 <span class="font-bold">¡Beneficio aplicado!</span> Por tu compra de S/. 80, te llevas el <span class="font-bold text-brandGold">Kit Premium (Valorizado en S/. 25) ¡GRATIS!</span>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="flex items-center justify-between p-3 rounded-xl border border-brandBrown/20 cursor-pointer hover:border-brandGold transition">
+                            <div class="flex items-center gap-2">
+                                <input type="radio" name="app-kit" value="Elemental" class="text-brandGold">
+                                <span class="text-xs font-bold">Kit Elemental</span>
+                            </div>
+                            <span class="text-xs font-semibold text-brandGold">S/. 15</span>
+                        </label>
+                        <label class="flex items-center justify-between p-3 rounded-xl border border-brandBrown/20 cursor-pointer hover:border-brandGold transition">
+                            <div class="flex items-center gap-2">
+                                <input type="radio" name="app-kit" value="Standard" class="text-brandGold">
+                                <span class="text-xs font-bold">Kit Standard</span>
+                            </div>
+                            <span class="text-xs font-semibold text-brandGold">S/. 20</span>
+                        </label>
+                        <label class="flex items-center justify-between p-3 rounded-xl border border-brandBrown/20 cursor-pointer hover:border-brandGold transition">
+                            <div class="flex items-center gap-2">
+                                <input type="radio" name="app-kit" value="Premium" checked class="text-brandGold">
+                                <span class="text-xs font-bold">Kit Premium (Incluido Gratis)</span>
+                            </div>
+                            <span class="text-xs font-semibold text-brandGold">S/. 25</span>
+                        </label>
+                    </div>
+                    <p class="text-[10px] text-brandBrown/70 italic">* Todos los kits incluyen regalito sorpresa y stickers cute. Puedes ver el contenido detallado en nuestros términos.</p>
+                </div>
+
+                <!-- DATOS DE ENVÍO Y PAGO AL 100% -->
+                <div class="space-y-3 bg-white/90 p-4 rounded-xl border border-brandGold/20">
+                    <label class="text-xs font-semibold uppercase tracking-wider text-brandBrown block">4. Datos de Envío y Pago (100% Adelantado)</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="text" placeholder="Nombres" class="p-2.5 text-xs bg-ivory border rounded-xl">
+                        <input type="text" placeholder="Apellidos" class="p-2.5 text-xs bg-ivory border rounded-xl">
+                    </div>
+                    <input type="text" placeholder="Celular / WhatsApp" class="w-full p-2.5 text-xs bg-ivory border rounded-xl">
+                    <select class="w-full p-2.5 text-xs bg-ivory border rounded-xl">
+                        <option>Recojo en tienda (Gratis)</option>
+                        <option>Envío a domicilio (Se coordina distrito)</option>
+                    </select>
+                    <input type="text" placeholder="Dirección exacta para envío" class="w-full p-2.5 text-xs bg-ivory border rounded-xl">
+                </div>
+            </div>
+
+            <!-- FOOTER CON ABEJITAS Y BOTÓN DE PAGO -->
+            <div class="bee-pattern-bg px-6 py-4 border-t border-brandGold/30 flex items-center justify-between">
+                <button onclick="closeCatalogModal()" class="px-5 py-2 rounded-xl border border-brandBrown/30 text-xs font-semibold uppercase tracking-wider hover:bg-brandBrown hover:text-white transition">Atrás</button>
+                <button onclick="alert('¡Pedido registrado con éxito! Por favor envíe su comprobante de pago al 100% por WhatsApp para proceder con la elaboración.')" class="px-5 py-2 rounded-xl bg-brandBrown text-white text-xs font-semibold uppercase tracking-wider hover:bg-brandGold transition">Confirmar y Pagar 100%</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VENTANA MODAL DE PEDIDO PERSONALIZADO -->
+    <div id="custom-modal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-ivory w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-brandGold/30 flex flex-col max-h-[95vh]">
+            <div class="bee-pattern-bg px-6 py-4 border-b border-brandGold/30 flex items-center justify-between">
+                <h3 class="cinzel text-lg font-bold text-brandBrown"><i class="fa-solid fa-wand-magic-sparkles mr-2 text-brandGold"></i> PEDIDO PERSONALIZADO</h3>
+                <button onclick="closeCustomOrderModal()" class="w-8 h-8 rounded-full bg-white/80 flex items-center justify-center text-brandBrown hover:bg-brandGold hover:text-white transition"><i class="fa-solid fa-xmark text-sm"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4 bg-ivory">
+                <p class="text-xs text-brandBrown/80">Diseñamos tus press-on nails a medida exacta. Para ello, necesitamos conocer tus medidas precisas de uña.</p>
+                
+                <div class="p-4 bg-white rounded-xl border border-brandGold/30 space-y-3">
+                    <h4 class="cinzel text-xs font-bold uppercase text-brandGold">Guía de medición para tu diseño personalizado:</h4>
+                    <p class="text-xs text-brandBrown/70 leading-relaxed">
+                        1. Mide el ancho de tus uñitas con una cinta métrica en milímetros o coloca una <b>moneda</b> al lado de tu mano derecha bien recta sobre una mesa y toma una foto clara.<br>
+                        2. Sube la foto o ingresa tus medidas exactas (Pulgar, Índice, Medio, Anular, Meñique).
+                    </p>
+                    <input type="file" class="w-full text-xs p-2 border rounded-xl bg-ivory">
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold uppercase tracking-wider text-brandBrown block">Detalles de tu diseño personalizado</label>
+                    <textarea rows="3" placeholder="Describe los colores, efectos, dijes o adjunta referencia..." class="w-full p-3 text-xs bg-white border rounded-xl"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="text" placeholder="Tu Nombre y Apellido" class="p-2.5 text-xs bg-white border rounded-xl">
+                    <input type="text" placeholder="WhatsApp" class="p-2.5 text-xs bg-white border rounded-xl">
+                </div>
+            </div>
+            <div class="bee-pattern-bg px-6 py-4 border-t border-brandGold/30 flex justify-between items-center">
+                <button onclick="closeCustomOrderModal()" class="px-5 py-2 rounded-xl border border-brandBrown/30 text-xs font-semibold uppercase">Atrás</button>
+                <button onclick="alert('¡Solicitud de pedido personalizado enviada! Nos comunicaremos contigo por WhatsApp para la cotización.')" class="px-5 py-2 rounded-xl bg-brandBrown text-white text-xs font-semibold uppercase">Enviar Solicitud</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VENTANA MODAL PARA TABLA DE MILÍMETROS -->
+    <div id="size-chart-modal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-ivory w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-brandGold/30 flex flex-col">
+            <div class="bee-pattern-bg px-6 py-4 border-b border-brandGold/30 flex items-center justify-between">
+                <h3 class="cinzel text-base font-bold text-brandBrown" id="chart-modal-title">Tabla de Medidas - Punta Almendra</h3>
+                <button onclick="closeSizeChartModal()" class="w-8 h-8 rounded-full bg-white/80 flex items-center justify-center text-brandBrown hover:bg-brandGold hover:text-white transition"><i class="fa-solid fa-xmark text-sm"></i></button>
+            </div>
+            <div class="p-6 bg-white overflow-x-auto">
+                <table class="w-full text-center text-xs border-collapse border border-brandGold/40" id="size-table-content">
+                    <!-- Contenido dinámico según la punta -->
+                </table>
+            </div>
+            <div class="bee-pattern-bg px-6 py-3 border-t border-brandGold/30 flex justify-end">
+                <button onclick="closeSizeChartModal()" class="px-4 py-2 bg-brandBrown text-white rounded-xl text-xs font-semibold uppercase">Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VENTANA MODAL PARA FLIPBOOK (TÉRMINOS Y BENEFICIOS) -->
+    <div id="flipbook-modal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-ivory w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden border border-brandGold/30 flex flex-col">
+            <div class="bee-pattern-bg px-6 py-4 border-b border-brandGold/30 flex items-center justify-between">
+                <h3 class="cinzel text-lg font-bold text-brandBrown" id="flipbook-title">Información Oficial</h3>
+                <button onclick="closeFlipbook()" class="w-8 h-8 rounded-full bg-white/80 flex items-center justify-center text-brandBrown hover:bg-brandGold hover:text-white transition"><i class="fa-solid fa-xmark text-sm"></i></button>
+            </div>
+            <div class="p-8 bg-ivory min-h-[380px] flex items-center justify-center">
+                <div class="book-container rounded-xl shadow-lg border border-brandGold/20 p-8 relative flex flex-col justify-between" id="flipbook-content">
+                    <!-- Contenido del libro -->
+                </div>
+            </div>
+            <div class="bee-pattern-bg px-6 py-4 border-t border-brandGold/30 flex justify-between items-center">
+                <button onclick="prevPage()" class="px-4 py-2 bg-white border border-brandBrown/30 rounded-lg text-xs font-semibold uppercase">Anterior</button>
+                <span id="page-indicator" class="text-xs font-semibold text-brandBrown">Página 1 de 2</span>
+                <button onclick="nextPage()" class="px-4 py-2 bg-brandBrown text-white rounded-lg text-xs font-semibold uppercase">Siguiente</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL DE ADMINISTRACIÓN (ADMIN) -->
+    <div id="admin-modal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-ivory w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden border border-brandGold/30 flex flex-col max-h-[90vh]">
+            <div class="bee-pattern-bg px-6 py-4 border-b border-brandGold/30 flex items-center justify-between">
+                <h3 class="cinzel text-lg font-bold text-brandBrown"><i class="fa-solid fa-sliders mr-2"></i> PANEL DE ADMINISTRACIÓN - GABEE STUDIO</h3>
+                <button onclick="toggleAdminPanel()" class="w-8 h-8 rounded-full bg-white/80 flex items-center justify-center text-brandBrown hover:bg-brandGold hover:text-white transition"><i class="fa-solid fa-xmark text-sm"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-6">
+                <p class="text-xs text-brandBrown/70">Personaliza libremente tu catálogo Press On, fotos multi-ángulo, precios y asociación de tipo de punta.</p>
+                
+                <div class="space-y-4">
+                    <h4 class="cinzel text-sm font-bold border-b border-brandBrown/20 pb-2">Editar Catálogo Press On (Stock)</h4>
+                    <div class="p-4 bg-white rounded-xl border border-brandBrown/10 space-y-2">
+                        <label class="text-[10px] uppercase font-semibold text-brandBrown">Nombre del Set</label>
+                        <input type="text" value="SET I · VELVET CAT-EYE & CROMO" class="w-full p-2 text-xs border rounded-lg">
+                        <label class="text-[10px] uppercase font-semibold text-brandBrown">Precio (S/.)</label>
+                        <input type="text" value="80.00" class="w-full p-2 text-xs border rounded-lg">
+                        <label class="text-[10px] uppercase font-semibold text-brandBrown">Tipo de Punta Predeterminada</label>
+                        <select class="w-full p-2 text-xs border rounded-lg">
+                            <option>Punta Almendra</option>
+                            <option>Punta Stiletto</option>
+                            <option>Punta Coffin</option>
+                            <option>Punta Square (Cuadrada)</option>
+                        </select>
+                        <label class="text-[10px] uppercase font-semibold text-brandBrown">URLs de Fotos (Multi-ángulo)</label>
+                        <input type="text" value="https://images.unsplash.com/photo-1512496015851-a90fb38ba796..." class="w-full p-2 text-xs border rounded-lg">
+                    </div>
+                </div>
+            </div>
+            <div class="bee-pattern-bg px-6 py-4 border-t border-brandGold/30 flex justify-end">
+                <button onclick="saveAdminChanges()" class="px-5 py-2 bg-brandBrown text-white rounded-xl text-xs font-semibold uppercase tracking-wider hover:bg-brandGold transition">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS DE CONTROL -->
+    <script>
+        // Funciones generales de Modales
+        function openCatalogModal() { document.getElementById('catalog-modal').classList.remove('hidden'); }
+        function closeCatalogModal() { document.getElementById('catalog-modal').classList.add('hidden'); }
+        function openCustomOrderModal() { document.getElementById('custom-modal').classList.remove('hidden'); }
+        function closeCustomOrderModal() { document.getElementById('custom-modal').classList.add('hidden'); }
+        function toggleAdminPanel() { document.getElementById('admin-modal').classList.toggle('hidden'); }
+        function saveAdminChanges() { alert('¡Cambios guardados con éxito en Gabee Studio!'); toggleAdminPanel(); }
+
+        // Visor de fotos dinámico con flechitas
+        const catalogPhotos = [
+            "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&q=80&w=600",
+            "https://images.unsplash.com/photo-1632345031435-8727f6c97d34?auto=format&fit=crop&q=80&w=600",
+            "https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&q=80&w=600"
+        ];
+        let currentPhotoIdx = 0;
+        function nextCatalogPhoto() {
+            currentPhotoIdx = (currentPhotoIdx + 1) % catalogPhotos.length;
+            document.getElementById('catalog-active-img').src = catalogPhotos[currentPhotoIdx];
+        }
+        function prevCatalogPhoto() {
+            currentPhotoIdx = (currentPhotoIdx - 1 + catalogPhotos.length) % catalogPhotos.length;
+            document.getElementById('catalog-active-img').src = catalogPhotos[currentPhotoIdx];
+        }
+
+        // Selección de tallas (Solo letras)
+        let selectedSize = 'XS';
+        function selectSize(size) {
+            ['XS', 'S', 'M', 'L'].forEach(s => {
+                document.getElementById(`btn-size-${s}`).classList.remove('border-brandGold', 'bg-brandGold/10');
+            });
+            document.getElementById(`btn-size-${size}`).classList.add('border-brandGold', 'bg-brandGold/10');
+            selectedSize = size;
+        }
+
+        // Tablas de medidas por tipo de punta
+        const sizeChartsData = {
+            almendra: {
+                title: "Tabla de Medidas - Punta Almendra",
+                html: `<tr class="bg-brandGold/10"><th class="border p-2">Dedo</th><th class="border p-2">XS</th><th class="border p-2">S</th><th class="border p-2">M</th><th class="border p-2">L</th></tr>
+                       <tr><td class="border p-2 font-bold">Pulgar</td><td class="border p-2">3 (1.0 cm)</td><td class="border p-2">2 (1.13 cm)</td><td class="border p-2">1 (1.23 cm)</td><td class="border p-2">0 (1.32 cm)</td></tr>
+                       <tr><td class="border p-2 font-bold">Índice</td><td class="border p-2">6 (0.92 cm)</td><td class="border p-2">5 (0.97 cm)</td><td class="border p-2">4 (1.0 cm)</td><td class="border p-2">3 (1.02 cm)</td></tr>
+                       <tr><td class="border p-2 font-bold">Medio</td><td class="border p-2">5 (0.97 cm)</td><td class="border p-2">4 (1.0 cm)</td><td class="border p-2">3 (1.02 cm)</td><td class="border p-2">2 (1.13 cm)</td></tr>
+                       <tr><td class="border p-2 font-bold">Anular</td><td class="border p-2">6 (0.92 cm)</td><td class="border p-2">5 (0.97 cm)</td><td class="border p-2">4 (1.0 cm)</td><td class="border p-2">3 (1.02 cm)</td></tr>
+                       <tr><td class="border p-2 font-bold">Meñique</td><td class="border p-2">11 (0.69 cm)</td><td class="border p-2">10 (0.76 cm)</td><td class="border p-2">9 (0.8 cm)</td><td class="border p-2">8 (0.85 cm)</td></tr>`
+            },
+            stiletto: {
+                title: "Tabla de Medidas - Punta Stiletto",
+                html: `<tr class="bg-brandGold/10"><th class="border p-2">Dedo</th><th class="border p-2">XS</th><th class="border p-2">S</th><th class="border p-2">M</th><th class="border p-2">L</th></tr>
+                       <tr><td class="border p-2 font-bold">Pulgar</td><td class="border p-2">#3 (1.05 cm)</td><td class="border p-2">#2 (1.18 cm)</td><td class="border p-2">#1 (1.27 cm)</td><td class="border p-2">#0 (1.28 cm)</td></tr>
+                       <tr><td class="border p-2 font-bold">Índice</td><td class="border p-2">#6 (0.92 cm)</td><td class="border p-2">#5 (0.99 cm)</td><td class="border p-2">#4 (1.02 cm)</td><td class="border p-2">#3 (1.05 cm)</td></tr>
+                       <tr><td class="border p-2 font-bold">Medio</td><td class="border p-2">#5 (0.99 cm)</td><td class="border p-2">#4 (1.02 cm)</td><td class="border p-2">#3 (1.05 cm)</td><td class="border p-2">#2 (1.18 cm)</td></tr>
+                       <tr><td class="border p-2 font-bold">Anular</td><td class="border p-2">#6 (0.92 cm)</td><td class="border p-2">#5 (0.99 cm)</td><td class="border p-2">#4 (1.02 cm)</td><td class="border p-2">#3 (1.05 cm)</td></tr>
+                       <tr><td class="border p-2 font-bold">Meñique</td><td class="border p-2">#9 (0.75 cm)</td><td class="border p-2">#8 (0.81 cm)</td><td class="border p-2">#7 (0.89 cm)</td><td class="border p-2">#6 (0.92 cm)</td></tr>`
+            },
+            coffin: {
+                title: "Tabla de Medidas - Punta Coffin",
+                html: `<tr class="bg-brandGold/10"><th class="border p-2">Dedo</th><th class="border p-2">XS</th><th class="border p-2">S</th><th class="border p-2">M</th><th class="border p-2">L</th></tr>
+                       <tr><td class="border p-2 font-bold">Pulgar</td><td class="border p-2">#3 (1.1 cm)</td><td class="border p-2">#2 (1.14 cm)</td><td class="border p-2">#1 (1.15 cm)</td><td class="border p-2">#0 (1.25 cm)</td></tr>
+                       <tr><td class="border p-2 font-bold">Índice</td><td class="border p-2">#7 (0.82 cm)</td><td class="border p-2">#6 (0.78 cm)</td><td class="border p-2">#5 (0.94 cm)</td><td class="border p-2">#4 (0.96 cm)</td></tr>
+                       <tr><td class="border p-2 font-bold">Medio</td><td class="border p-2">#6 (0.78 cm)</td><td class="border p-2">#5 (0.94 cm)</td><td class="border p-2">#4 (0.96 cm)</td><td class="border p-2">#3 (1.1 cm)</td></tr>
+                       <tr><td class="border p-2 font-bold">Anular</td><td class="border p-2">#7 (0.82 cm)</td><td class="border p-2">#6 (0.78 cm)</td><td class="border p-2">#5 (0.94 cm)</td><td class="border p-2">#4 (0.96 cm)</td></tr>
+                       <tr><td class="border p-2 font-bold">Meñique</td><td class="border p-2">#11 (0.61 cm)</td><td class="border p-2">#10 (0.68 cm)</td><td class="border p-2">#10 (0.68 cm)</td><td class="border p-2">#9 (0.96 cm)</td></tr>`
+            },
+            square: {
+                title: "Tabla de Medidas - Punta Square (Cuadrada)",
+                html: `<tr class="bg-brandGold/10"><th class="border p-2">Dedo</th><th class="border p-2">XS</th><th class="border p-2">S</th><th class="border p-2">M</th><th class="border p-2">L</th></tr>
+                       <tr><td class="border p-2 font-bold">Pulgar</td><td class="border p-2">#3 (1.0 cm)</td><td class="border p-2">#2 (1.1 cm)</td><td class="border p-2">#1 (1.2 cm)</td><td class="border p-2">#0 (1.29 cm)</td></tr>
+                       <tr><td class="border p-2 font-bold">Índice</td><td class="border p-2">#8 (0.79 cm)</td><td class="border p-2">#7 (0.8 cm)</td><td class="border p-2">#6 (0.75 cm)</td><td class="border p-2">#4 (0.93 cm)</td></tr>
+                       <tr><td class="border p-2 font-bold">Medio</td><td class="border p-2">#7 (0.8 cm)</td><td class="border p-2">#6 (0.75 cm)</td><td class="border p-2">#5 (0.91 cm)</td><td class="border p-2">#3 (1.0 cm)</td></tr>
+                       <tr><td class="border p-2 font-bold">Anular</td><td class="border p-2">#8 (0.79 cm)</td><td class="border p-2">#7 (0.8 cm)</td><td class="border p-2">#6 (0.75 cm)</td><td class="border p-2">#4 (0.93 cm)</td></tr>
+                       <tr><td class="border p-2 font-bold">Meñique</td><td class="border p-2">#11 (0.63 cm)</td><td class="border p-2">#11 (0.63 cm)</td><td class="border p-2">#10 (0.67 cm)</td><td class="border p-2">#9 (0.89 cm)</td></tr>`
+            }
+        };
+
+        function updateSizeChart() {
+            const val = document.getElementById('tip-type-select').value;
+            const chart = sizeChartsData[val];
+            document.getElementById('chart-modal-title').innerText = chart.title;
+            document.getElementById('size-table-content').innerHTML = chart.html;
+        }
+
+        function openSizeChartModal() {
+            updateSizeChart();
+            document.getElementById('size-chart-modal').classList.remove('hidden');
+        }
+        function closeSizeChartModal() { document.getElementById('size-chart-modal').classList.add('hidden'); }
+
+        // Datos del Flipbook interactivo (Términos y Beneficios)
+        let currentType = 'terms';
+        let currentPage = 1;
+        const flipbookData = {
+            terms: [
+                { title: "Términos y Condiciones (1/2)", text: "POLÍTICA DE DISEÑO COTIZADO: Tienes un plazo máximo de 24 horas después de tu reserva para elegir el diseño definitivo. No se aceptarán cambios el día de la cita.\n\nTARDANZA: Esperamos un máximo de 10 minutos. Pasado ese tiempo, si el diseño es complejo, se reprogramará o cancelará con pérdida de adelanto." },
+                { title: "Términos y Condiciones (2/2)", text: "NORMAS: Atendemos con mucho amor casos especiales (onicofagia, etc.). No se permite la asistencia de niños para garantizar un espacio de relajación absoluto.\n\nUÑAS CON HONGOS: No atendemos uñas con hongos; solo nos encargamos de la parte estética en manos sanas." }
+            ],
+            benefits: [
+                { title: "Beneficios en Gabee Studio (1/2)", text: "HIGIENE Y SEGURIDAD TOTAL: Herramientas 100% esterilizadas y descartables exclusivas para cada sesión.\n\nPRODUCTOS DE ALTA GAMA: Marcas profesionales de primera calidad para cuidar la salud de tus uñas." },
+                { title: "Beneficios en Gabee Studio (2/2)", text: "HIDRATACIÓN Y MASAJES: Incluye aceite nutritivo para cutículas y suave exfoliación al finalizar.\n\nTARJETA DE FIDELIDAD: Acumula beneficios y sorpresas increíbles para tus fechas especiales (cumpleaños, bodas, Navidad)." }
+            ]
+        };
+
+        function openFlipbook(type) {
+            currentType = type;
+            currentPage = 1;
+            document.getElementById('flipbook-title').innerText = type === 'terms' ? 'Términos y Condiciones' : 'Beneficios en Gabee Studio';
+            renderFlipbookPage();
+            document.getElementById('flipbook-modal').classList.remove('hidden');
+        }
+        function closeFlipbook() { document.getElementById('flipbook-modal').classList.add('hidden'); }
+        function renderFlipbookPage() {
+            const data = flipbookData[currentType];
+            const content = data[currentPage - 1];
+            document.getElementById('flipbook-content').innerHTML = `
+                <div>
+                    <h4 class="cinzel text-lg font-bold text-brandBrown mb-4">${content.title}</h4>
+                    <p class="text-xs text-brandBrown/80 whitespace-pre-line leading-relaxed">${content.text}</p>
+                </div>
+                <div class="text-[10px] text-brandBrown/40 text-center uppercase tracking-widest mt-4">Gabee Studio • Libro Oficial</div>
+            `;
+            document.getElementById('page-indicator').innerText = `Página ${currentPage} de ${data.length}`;
+        }
+        function nextPage() {
+            if (currentPage < flipbookData[currentType].length) { currentPage++; renderFlipbookPage(); }
+        }
+        function prevPage() {
+            if (currentPage > 1) { currentPage--; renderFlipbookPage(); }
+        }
+    </script>
+</body>
+</html>
