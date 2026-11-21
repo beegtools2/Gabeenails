@@ -44,10 +44,10 @@ export const CoursesSection: React.FC = () => {
           </p>
         </div>
 
-        {/* Horizontal List of Courses */}
-        <div className="space-y-3">
-          {activeCourses.map((course) => (
-            <div
+       {/* Horizontal List of Courses */}
+      <div className="rounded-2xl border border-[#E5DAC8] bg-[#FAF7F2] p-5 text-center text-xs sm:text-sm text-[#5D3704]">
+        Próximamente nuevos cursos y especializaciones disponibles.
+      </div>
               key={course.id}
               onClick={() => openCourseModal(course)}
               className="group p-3 rounded-2xl bg-[#FAF7F2] border border-[#E5DAC8] hover:border-[#D4AF37] hover:shadow-md hover:bg-[#FFFDF9] transition-all duration-300 flex items-center gap-3.5 cursor-pointer"
