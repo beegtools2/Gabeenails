@@ -779,7 +779,7 @@ export const PromoPressOnModal: React.FC = () => {
                   onClick={() => {
                     const waPhone = settings.whatsappNumber.replace(/[^0-9]/g, '');
                     const clientBirthday = currentUser?.birthDate || 'N/A';
-                    const isPickupResend = deliveryType === 'studio' || /studio|recojo/i.test(deliveryType === 'studio' ? 'Recojo en Studio' : 'Envío a Domicilio');
+                    const isPickupResend = deliveryType === 'studio';
                     const addressStr = isPickupResend ? 'Av. Arnaldo Márquez 1165 N° 168' : `${address.trim()}${district.trim() ? ` (${district.trim()})` : ''}`.trim() || 'N/A';
                     const referenceStr = isPickupResend ? 'Plaza Márquez' : (reference.trim() || 'N/A');
                     const instagramStr = instagram.trim() ? `@${instagram.trim().replace('@', '')}` : 'N/A';

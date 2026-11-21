@@ -1104,7 +1104,7 @@ export const PressOnModal: React.FC<PressOnModalProps> = ({ isOpen, onClose }) =
                   onClick={() => {
                     const waPhone = '51' + (settings.whatsappNumber || '934403311').replace(/[^0-9]/g, '').replace(/^51/, '');
                     const clientBirthday = birthDate || currentUser?.birthDate || 'N/A';
-                    const isPickupResend = deliveryType === 'studio' || /studio|recojo/i.test(deliveryType === 'studio' ? 'Recojo en Studio' : 'Envío a Domicilio');
+                    const isPickupResend = deliveryType === 'studio';
                     const addressStr = isPickupResend ? 'Av. Arnaldo Márquez 1165 N° 168' : `${address.trim()}${district.trim() ? ` (${district.trim()})` : ''}`.trim() || 'N/A';
                     const referenceStr = isPickupResend ? 'Plaza Márquez' : (reference.trim() || 'N/A');
                     const instagramStr = instagram.trim() ? `@${instagram.trim().replace('@', '')}` : 'N/A';
