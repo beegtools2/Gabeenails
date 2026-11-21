@@ -57,6 +57,7 @@ export default defineConfig(({ mode }) => {
   return {
     define: {
       __FIREBASE_CONFIG__: JSON.stringify(loadFirebaseConfig(mode)),
+      'process.env.SECRETS_SCAN_OMIT_KEYS': JSON.stringify('PORT'),
     },
     plugins: [react(), tailwindcss(), emailApiPlugin()],
     resolve: {
