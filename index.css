@@ -1,0 +1,226 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Marcellus', serif;
+    color: #5D3704;
+    background-color: #FAF5EB;
+  }
+  h1, h2, h3, h4, h5, h6, .font-display, .font-title {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    color: #5D3704;
+  }
+  .font-brand {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+  }
+  .font-cinzel-decorative {
+    font-family: 'Cinzel Decorative', cursive, serif;
+  }
+  .font-cinzel {
+    font-family: 'Cinzel', serif;
+  }
+  .font-marcellus {
+    font-family: 'Marcellus', serif;
+  }
+  button, .btn-primary, .btn-secondary {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    color: #5D3704;
+  }
+}
+
+/* Focus unificado para todos los campos de formulario
+   Trazo fino y limpio en tono marrón dorado, sin outline ni sombras gruesas. */
+@layer base {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]),
+  textarea,
+  select {
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]):focus,
+  textarea:focus,
+  select:focus {
+    outline: none !important;
+    outline-offset: 0 !important;
+    box-shadow: none !important;
+    border-color: #5D3704 !important;
+  }
+}
+
+/* Fondo marfil limpio y sólido, un toque más cálido/profundo que el anterior.
+   Sin texturas, ruido, SVG, filtros ni capas que puedan afectar el rendimiento. */
+.page-marble-bg {
+  background-color: #FAF5EB;
+}
+
+/* Custom neon lines and 3D glowing effects */
+@keyframes neonPulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.35), inset 0 0 10px rgba(212, 175, 55, 0.15);
+    border-color: rgba(212, 175, 55, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(212, 175, 55, 0.65), 0 0 45px rgba(255, 230, 180, 0.3), inset 0 0 15px rgba(212, 175, 55, 0.3);
+    border-color: rgba(226, 192, 85, 0.9);
+  }
+}
+
+@keyframes neonRosePulse {
+  0%, 100% {
+    box-shadow: 0 0 14px rgba(244, 162, 145, 0.3), inset 0 0 8px rgba(244, 162, 145, 0.15);
+    border-color: rgba(244, 162, 145, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(244, 162, 145, 0.6), 0 0 40px rgba(254, 215, 215, 0.35), inset 0 0 12px rgba(244, 162, 145, 0.25);
+    border-color: rgba(250, 180, 165, 0.85);
+  }
+}
+
+.neon-gold-border {
+  animation: neonPulse 3.5s ease-in-out infinite;
+}
+
+.neon-rose-border {
+  animation: neonRosePulse 4s ease-in-out infinite;
+}
+
+@keyframes bounceSubtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-bounce-subtle {
+  animation: bounceSubtle 3s ease-in-out infinite;
+}
+
+/* Smooth custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F4EFEA;
+}
+::-webkit-scrollbar-thumb {
+  background: #D8CEBE;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #BFAFA0;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.35);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.6);
+}
+
+/* Glassmorphism surfaces */
+.glass-beige {
+  background: rgba(255, 253, 249, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(228, 218, 204, 0.65);
+}
+
+.glass-dark-beige {
+  background: rgba(244, 238, 229, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(212, 198, 180, 0.5);
+}
+
+/* Preloader & Bee Corporate Animations */
+@keyframes beeGentleHover {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-7px) rotate(1.5deg);
+  }
+}
+
+@keyframes beeCorporateFlyIn {
+  0% {
+    transform: translate(65vw, -45vh) scale(0.2) rotate(-22deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  75% {
+    transform: translate(-14px, 10px) scale(1.06) rotate(4deg);
+  }
+  90% {
+    transform: translate(5px, -4px) scale(0.98) rotate(-1.5deg);
+  }
+  100% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+/* Feathered gradient reveal: the golden glow fades in softly from bottom to top
+   with a wide translucent band, so no rectangular edge or hard cut is visible. */
+@keyframes beeFillUp {
+  from {
+    -webkit-mask-position: 0% 0%;
+    mask-position: 0% 0%;
+  }
+  to {
+    -webkit-mask-position: 0% 100%;
+    mask-position: 0% 100%;
+  }
+}
+
+.animate-bee-fly-corporate {
+  animation: beeCorporateFlyIn 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-bee-hover {
+  animation: beeGentleHover 3s ease-in-out infinite;
+}
+
+.animate-bee-fill {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 46%,
+    rgba(0, 0, 0, 0.35) 50%,
+    #000 54%,
+    #000 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 46%,
+    rgba(0, 0, 0, 0.35) 50%,
+    #000 54%,
+    #000 100%
+  );
+  -webkit-mask-size: 100% 230%;
+  mask-size: 100% 230%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: 0% 0%;
+  mask-position: 0% 0%;
+  animation: beeFillUp 1.8s cubic-bezier(0.35, 0, 0.25, 1) 0.5s forwards;
+}
+
