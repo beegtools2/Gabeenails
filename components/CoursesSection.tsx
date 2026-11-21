@@ -18,11 +18,11 @@ export const CoursesSection: React.FC = () => {
               <span className="text-xs sm:text-sm text-[#D4AF37] drop-shadow-[0_0_6px_rgba(212,175,55,0.6)] leading-none select-none">✦</span>
             </h2>
             <p className="text-xs sm:text-sm font-['Marcellus'] text-[#5D3704] mt-1 leading-relaxed text-center">
-              Capacítate con nuestras masterclasses y especializaciones profesionales ♥
+              Aprenderás todo lo que debes saber para ser una de las mejores en el rubro, especialízate hoy conmigo.
             </p>
           </div>
           <div className="py-8 px-4 rounded-2xl bg-[#FAF7F2] border border-[#E8DEC9] text-[#7A6655] text-xs font-['Marcellus']">
-            Próximamente nuevos cursos y especializaciones disponibles. ♥
+            Próximamente cursos y especializaciones disponibles. 
           </div>
         </div>
       </div>
