@@ -10,6 +10,7 @@ import {
   handleSendVerification,
 } from './server/emailHandlers.ts';
 import type { ApiRequest, ApiResponse } from './server/http.ts';
+import { loadFirebaseConfig } from './config/firebase.ts';
 
 // Cargar variables de entorno desde .env solo en desarrollo local.
 // En Vercel las variables se inyectan como process.env.
@@ -53,8 +54,11 @@ function emailApiPlugin(): Plugin {
   };
 }
 
-export default defineConfig(() => {
+export default defineConfig(({ mode }) => {
   return {
+    define: {
+      __FIREBASE_CONFIG__: JSON.stringify(loadFirebaseConfig(mode)),
+    },
     plugins: [react(), tailwindcss(), emailApiPlugin(), telegramSalesPlugin()],
     resolve: {
       alias: {

@@ -1905,7 +1905,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const appointment = apts.find((a) => a.id === action.targetId || a.code === action.targetId);
             if (!appointment) continue;
             // Aplicar solo si aún está pendiente de confirmación/depósito
-            if (appointment.status !== 'pending_deposit' && appointment.status !== 'pending') {
+            if (!['pending_deposit', 'pending'].includes(appointment.status)) {
               markApplied(action.id);
               continue;
             }
