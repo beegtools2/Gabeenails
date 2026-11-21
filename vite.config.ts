@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig, type Plugin } from 'vite';
 import dotenv from 'dotenv';
-import { telegramSalesPlugin } from './telegramPlugin.ts';
 import {
   handleLibroReclamaciones,
   handleSendPasswordReset,
@@ -59,7 +58,7 @@ export default defineConfig(({ mode }) => {
     define: {
       __FIREBASE_CONFIG__: JSON.stringify(loadFirebaseConfig(mode)),
     },
-    plugins: [react(), tailwindcss(), emailApiPlugin(), telegramSalesPlugin()],
+    plugins: [react(), tailwindcss(), emailApiPlugin()],
     resolve: {
       alias: {
         '@': path.resolve(process.cwd(), '.'),
