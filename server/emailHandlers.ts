@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { Resend } from 'resend';
 import type { ApiRequest, ApiResponse } from './http.ts';
-import { readJsonBody } from './http.ts';
+import { readJsonBody, sendJson } from './http.ts';
 
 const LIBRO_MAX_BODY_BYTES = 30 * 1024 * 1024;
 const LIBRO_FROM_EMAIL_FALLBACK = 'Gabee Studio <onboarding@resend.dev>';
@@ -117,26 +117,16 @@ export async function handleSendVerification(req: ApiRequest, res: ApiResponse):
 
           // ── VERIFICACIÓN DE CUENTA ─────────────────────────────────────
           // Aislada: usa EXCLUSIVAMENTE su propia key y su propio cliente Resend.
-          const verificationApiKey = process.env.RESEND_VERIFICATION_API_KEY;
+          const verificationApiKey = process.env.RESEND_VERIFICATION_API_KEY?.trim();
 
-          if (!verificationApiKey || verificationApiKey.trim() === '') {
-            console.warn('[Resend · Verificación] RESEND_VERIFICATION_API_KEY no está configurada en .env. Se generó el enlace de verificación para pruebas:', verifyUrl);
-            res.statusCode = 200;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(
-              JSON.stringify({
-                success: false,
-                simulated: true,
-                warning: 'RESEND_VERIFICATION_API_KEY no configurada en .env. Agrega tu API Key de verificación de Resend para el despacho real a Gmail.',
-                verifyUrl,
-              })
-            );
+          if (!verificationApiKey) {
+            sendJson(res, 503, { success: false, error: 'El correo de verificación no está configurado en el servidor.' });
             return;
           }
 
           const verificationResend = new Resend(verificationApiKey);
           const verificationFromEmail =
-            process.env.RESEND_VERIFICATION_FROM_EMAIL || 'Gabee Studio <onboarding@resend.dev>';
+            process.env.RESEND_VERIFICATION_FROM_EMAIL?.trim() || 'Gabee Studio <onboarding@resend.dev>';
           const appUrl = process.env.APP_URL || 'http://localhost:3000';
           const patternUrl = `${appUrl}/assets/aistudio/Inicio_5d3704_dd6e8988.png`;
 
@@ -298,18 +288,15 @@ export async function handleSendPasswordReset(req: ApiRequest, res: ApiResponse)
           }
           // ── RECUPERACIÓN DE CONTRASEÑA ─────────────────────────────────
           // Aislada: usa EXCLUSIVAMENTE su propia key y su propio cliente Resend.
-          const resetApiKey = process.env.RESEND_RESET_API_KEY;
-          if (!resetApiKey || resetApiKey.trim() === '') {
-            console.warn('[Resend · Reset] RESEND_RESET_API_KEY no configurada. Enlace de reset para pruebas:', resetUrl);
-            res.statusCode = 200;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ success: false, simulated: true, warning: 'RESEND_RESET_API_KEY no configurada en .env. Agrega tu API Key de Resend para el despacho real.', resetUrl }));
+          const resetApiKey = process.env.RESEND_RESET_API_KEY?.trim();
+          if (!resetApiKey) {
+            sendJson(res, 503, { success: false, error: 'El correo de recuperación no está configurado en el servidor.' });
             return;
           }
           const resetResend = new Resend(resetApiKey);
           // Remitente exclusivo del flujo de recuperación.
           const resetFromEmail =
-            process.env.RESEND_RESET_FROM_EMAIL || 'Gabee Studio <onboarding@resend.dev>';
+            process.env.RESEND_RESET_FROM_EMAIL?.trim() || 'Gabee Studio <onboarding@resend.dev>';
           const emailResult = await resetResend.emails.send({
             from: resetFromEmail,
             to: [email],
@@ -355,7 +342,7 @@ export async function handleLibroReclamaciones(req: ApiRequest, res: ApiResponse
         // API key exclusiva del Libro de Reclamaciones: solo entorno.
         const libroApiKey = process.env.RESEND_LIBRO_API_KEY?.trim();
         if (!libroApiKey) {
-          respond(500, { success: false, error: 'RESEND_LIBRO_API_KEY no configurada en el servidor.' });
+          respond(503, { success: false, error: 'El correo del Libro de Reclamaciones no está configurado en el servidor.' });
           return;
         }
         const libroFromEmail =

@@ -1,33 +1,16 @@
 /// <reference types="node" />
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
 import type { ApiRequest, ApiResponse } from './http.ts';
 import { readJsonBody, sendJson } from './http.ts';
-
-type TelegramDecision = 'accept' | 'reject';
-type TelegramTargetType = 'store' | 'recharge' | 'appointment';
-
-interface TelegramAction {
-  id: string;
-  type: TelegramTargetType;
-  targetId: string;
-  decision: TelegramDecision;
-  at: number;
-}
-
-interface StoredMessage {
-  text: string;
-  chatId: string;
-  messageId: number;
-}
-
-interface TelegramState {
-  offset: number;
-  chatId: string;
-  messages: Record<string, StoredMessage>;
-  actions: TelegramAction[];
-}
+import {
+  claimTelegramPoll,
+  readTelegramActions,
+  readTelegramState,
+  releaseTelegramPoll,
+  updateTelegramState,
+  type TelegramAction,
+  type TelegramDecision,
+  type TelegramTargetType,
+} from './telegramState.ts';
 
 interface OrderPayload {
   id: string;
@@ -94,21 +77,6 @@ interface AppointmentPayload {
 }
 const MAX_ACTIONS = 500;
 const MAX_STORED_MESSAGES = 300;
-function loadState(file: string): TelegramState {
-  const fallback: TelegramState = { offset: 0, chatId: '', messages: {}, actions: [] };
-  try {
-    if (!fs.existsSync(file)) return fallback;
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
-    return {
-      offset: Number(parsed?.offset) || 0,
-      chatId: typeof parsed?.chatId === 'string' ? parsed.chatId : '',
-      messages: parsed?.messages && typeof parsed.messages === 'object' ? parsed.messages : {},
-      actions: Array.isArray(parsed?.actions) ? parsed.actions : [],
-    };
-  } catch {
-    return fallback;
-  }
-}
 function escapeHtml(value: unknown): string {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -272,21 +240,19 @@ function buildDecisionLine(kind: 'cita' | 'pedido', decision: TelegramDecision):
 }
 
 export interface TelegramService {
-  status(): {
+  status(): Promise<{
     configured: boolean;
     chatLinked: boolean;
     chatId: string | null;
     lastPollAt: number | null;
     lastError: string | null;
     pendingActions: number;
-  };
-  actions(): { actions: TelegramAction[] };
+  }>;
+  actions(): Promise<{ actions: TelegramAction[] }>;
   notifyStoreOrder(req: ApiRequest, res: ApiResponse): Promise<void>;
   notifyRecharge(req: ApiRequest, res: ApiResponse): Promise<void>;
   notifyAppointment(req: ApiRequest, res: ApiResponse): Promise<void>;
   pollOnceThrottled(): Promise<void>;
-  startPolling(): void;
-  stopPolling(): void;
 }
 
 let singleton: TelegramService | null = null;
@@ -296,83 +262,45 @@ export function getTelegramService(): TelegramService {
 
   const token = (process.env.TELEGRAM_BOT_TOKEN || '').trim();
   const envChatId = (process.env.TELEGRAM_CHAT_ID || '').trim();
-  // En Vercel el filesystem es de solo lectura: el estado vive en /tmp por instancia.
-  const stateFile = process.env.VERCEL
-    ? path.join(os.tmpdir(), '.telegram-state.json')
-    : path.resolve(process.cwd(), '.telegram-state.json');
-
-  const sharedState = (globalThis as any).__gabeeTelegramState as TelegramState | undefined;
-  const state: TelegramState =
-    sharedState && typeof sharedState === 'object' && Array.isArray(sharedState.actions)
-      ? sharedState
-      : loadState(stateFile);
-  (globalThis as any).__gabeeTelegramState = state;
+  const configuredChatId = envChatId === '-1001234567890' ? '' : envChatId;
 
   let pollInFlight = false;
   let errorStreak = 0;
   let lastPollRequestAt = 0;
 
-  const health: { lastPollAt: number | null; lastError: string | null; pollerId: string } = ((
-    globalThis as any
-  ).__gabeeTelegramHealth ||= { lastPollAt: null, lastError: null, pollerId: '' });
-  const pollerId = `${process.pid}-${Date.now().toString(36)}`;
-
-  const saveState = () => {
-    try {
-      if (state.actions.length > MAX_ACTIONS) state.actions = state.actions.slice(-MAX_ACTIONS);
-      const messageKeys = Object.keys(state.messages);
-      if (messageKeys.length > MAX_STORED_MESSAGES) {
-        const trimmed: Record<string, StoredMessage> = {};
-        messageKeys.slice(-MAX_STORED_MESSAGES).forEach((key) => {
-          trimmed[key] = state.messages[key];
-        });
-        state.messages = trimmed;
-      }
-      fs.writeFileSync(stateFile, JSON.stringify(state, null, 2), 'utf8');
-    } catch (err: any) {
-      console.warn('[Telegram] No se pudo guardar el estado local:', err?.message || err);
-    }
-  };
+  const health: { lastPollAt: number | null; lastError: string | null } = { lastPollAt: null, lastError: null };
 
   const callTelegram = async (method: string, payload?: Record<string, unknown>) => {
     if (!token) throw new Error('TELEGRAM_BOT_TOKEN no configurado');
-    // Límite de tiempo estricto: si la red se queda colgada, el poller sigue funcionando.
-    const response = await Promise.race([
-      fetch(`https://api.telegram.org/bot${token}/${method}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: payload ? JSON.stringify(payload) : undefined,
-      }),
-      new Promise<Response>((_, reject) =>
-        setTimeout(
-          () => reject(new Error(`Telegram ${method} agotó el tiempo de espera`)),
-          15000
-        )
-      ),
-    ]);
+    const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: payload ? JSON.stringify(payload) : undefined,
+      signal: AbortSignal.timeout(method === 'sendMessage' ? 15000 : 5000),
+    }).catch(() => { throw new Error(`No se pudo conectar con Telegram (${method}).`); });
     const data: any = await response.json().catch(() => null);
     if (!data || data.ok !== true) {
-      throw new Error(data?.description || `Telegram ${method} falló (HTTP ${response.status})`);
+      throw new Error(`Telegram ${method} falló (HTTP ${response.status}).`);
     }
     return data.result;
   };
   const processTelegramUpdate = async (update: any) => {
     if (!update || typeof update !== 'object') return;
-    const updateId = Number(update?.update_id);
-    if (Number.isFinite(updateId)) state.offset = Math.max(state.offset, updateId + 1);
     if (update?.message) await handleMessage(update.message);
     if (update?.callback_query) await handleCallback(update.callback_query);
+    const updateId = Number(update.update_id);
+    if (Number.isSafeInteger(updateId)) {
+      await updateTelegramState((state) => {
+        state.offset = Math.max(state.offset, updateId + 1);
+        return true;
+      });
+    }
   };
 
-  const resolveChatId = (): string => {
-    if (state.chatId) return state.chatId;
-    // Ignora el placeholder de ejemplo: el chat real se detecta al enviar /start al bot.
-    if (envChatId && envChatId !== '-1001234567890') return envChatId;
-    return '';
-  };
+  const resolveChatId = async (): Promise<string> => configuredChatId || (await readTelegramState()).chatId;
 
   const sendMessage = async (text: string, keyboard?: Array<Array<Record<string, string>>>) => {
-    const chatId = resolveChatId();
+    const chatId = await resolveChatId();
     if (!chatId) {
       console.warn('[Telegram] Envío omitido: chat no vinculado. Abre @GabeeStudio_bot y envía /start.');
       return {
@@ -393,14 +321,14 @@ export function getTelegramService(): TelegramService {
     return { ok: true, linked: true, message };
   };
 
-  const registerMessage = (type: TelegramTargetType, targetId: string, text: string, message: any) => {
+  const registerMessage = async (type: TelegramTargetType, targetId: string, text: string, message: any) => {
     if (!message?.message_id) return;
-    state.messages[`${type}:${targetId}`] = {
-      text,
-      chatId: String(message.chat?.id ?? resolveChatId()),
-      messageId: message.message_id,
-    };
-    saveState();
+    await updateTelegramState((state) => {
+      state.messages[`${type}:${targetId}`] = { text, messageId: message.message_id };
+      state.messages = Object.fromEntries(Object.entries(state.messages)
+        .sort(([, first], [, second]) => first.messageId - second.messageId).slice(-MAX_STORED_MESSAGES));
+      return true;
+    });
   };
 
   const answerCallback = async (callbackQueryId: string, text: string) => {
@@ -467,6 +395,8 @@ export function getTelegramService(): TelegramService {
   };
 
   const handleCallback = async (callbackQuery: any) => {
+    const chatId = String(callbackQuery?.message?.chat?.id ?? '');
+    if (!chatId || chatId !== await resolveChatId()) return;
     const data = String(callbackQuery?.data || '');
     const parsed = parseCallbackData(data);
 
@@ -476,44 +406,44 @@ export function getTelegramService(): TelegramService {
     }
 
     const { type: targetType, decision: targetDecision, targetId } = parsed;
-    const stored = state.messages[`${targetType}:${targetId}`];
+    const messageKey = `${targetType}:${targetId}`;
+    const stored = (await readTelegramState()).messages[messageKey];
     const kind = resolveTelegramKind(targetType, targetId, stored?.text);
     console.log(
       `[Telegram] Callback ${targetDecision === 'accept' ? 'Confirmar' : 'Rechazar'} · ${kind} (${targetType}) · ${targetId}`
     );
     const actionId = `${targetType}:${targetDecision}:${targetId}`;
-    const alreadyProcessed = state.actions.some((action) => action.id === actionId);
-    if (alreadyProcessed) {
+    const saved = await updateTelegramState((state) => {
+      if (state.actions.some((action) => action.id === actionId)) return false;
+      state.actions = [...state.actions, {
+        id: actionId,
+        type: targetType,
+        targetId,
+        decision: targetDecision,
+        at: Date.now(),
+      }].slice(-MAX_ACTIONS);
+      return true;
+    });
+    if (!saved) {
       await answerCallback(callbackQuery.id, 'Esta acción ya fue procesada.');
       return;
     }
-
-    state.actions.push({
-      id: actionId,
-      type: targetType,
-      targetId,
-      decision: targetDecision,
-      at: Date.now(),
-    });
-    saveState();
 
     // Respuesta inmediata a Telegram para que el botón deje de cargar,
     // con el texto exacto según sea cita o pedido.
     await answerCallback(callbackQuery.id, buildDecisionLine(kind, targetDecision));
 
-    if (stored) {
+    if (stored && stored.messageId === callbackQuery.message.message_id) {
       const updatedText = `${stored.text}\n\n${buildDecisionLine(kind, targetDecision)}`;
       try {
         await callTelegram('editMessageText', {
-          chat_id: stored.chatId,
+          chat_id: chatId,
           message_id: stored.messageId,
           text: updatedText,
           parse_mode: 'HTML',
           disable_web_page_preview: true,
           reply_markup: { inline_keyboard: [] },
         });
-        stored.text = updatedText;
-        saveState();
       } catch (err: any) {
         console.warn('[Telegram] No se pudo actualizar el mensaje:', err?.message || err);
       }
@@ -524,12 +454,13 @@ export function getTelegramService(): TelegramService {
     const chatId = message?.chat?.id ? String(message.chat.id) : '';
     if (!chatId) return;
 
-    // Solo se vincula el primer chat (o el configurado en .env).
-    if (state.chatId && state.chatId !== chatId) return;
-
-    const isNewLink = state.chatId !== chatId;
-    state.chatId = chatId;
-    saveState();
+    const linkedChatId = await resolveChatId();
+    if (linkedChatId && linkedChatId !== chatId) return;
+    const isNewLink = !linkedChatId && await updateTelegramState((state) => {
+      if (state.chatId) return false;
+      state.chatId = chatId;
+      return true;
+    });
 
     const text = String(message?.text || '').trim().toLowerCase();
     if (text === '/start' || text === '/vincular' || isNewLink) {
@@ -538,8 +469,7 @@ export function getTelegramService(): TelegramService {
           chat_id: chatId,
           text:
             '✅ <b>Chat vinculado a Gabee Studio</b>\n\n' +
-            'Recibirás aquí las notificaciones de <b>compras de tienda</b> y <b>recargas de BeeCoins</b> con sus botones de aprobación.\n\n' +
-            `Tu chat ID es <code>${chatId}</code>.`,
+            'Recibirás aquí las notificaciones de <b>compras de tienda</b> y <b>recargas de BeeCoins</b> con sus botones de aprobación.',
           parse_mode: 'HTML',
         });
       } catch (err: any) {
@@ -548,10 +478,11 @@ export function getTelegramService(): TelegramService {
     }
   };
 
-  const pollOnce = async () => {
+  const pollOnce = async (offset: number) => {
     const updates: any[] = await callTelegram('getUpdates', {
-      offset: state.offset,
+      offset,
       timeout: 0,
+      limit: 4,
       allowed_updates: ['message', 'callback_query'],
     });
     if (!Array.isArray(updates) || updates.length === 0) return;
@@ -559,87 +490,51 @@ export function getTelegramService(): TelegramService {
     for (const update of updates) {
       await processTelegramUpdate(update);
     }
-    saveState();
-  };
-    const runPoll = async () => {
-      if (pollInFlight) return;
-      pollInFlight = true;
-      const started = Date.now();
-      try {
-        await pollOnce();
-        health.lastPollAt = Date.now();
-        health.lastError = null;
-        health.pollerId = pollerId;
-        errorStreak = 0;
-      } catch (err: any) {
-        errorStreak += 1;
-        health.lastError = err?.message || String(err);
-        health.pollerId = pollerId;
-        if (errorStreak === 1 || errorStreak % 20 === 0) {
-          console.warn('[Telegram] Polling:', err?.message || err);
-        }
-      } finally {
-        pollInFlight = false;
-        if (Date.now() - started > 30000) {
-          console.warn('[Telegram] Poll lenta:', Date.now() - started, 'ms');
-        }
-      }
-    };
-
-  const startPolling = () => {
-    if (!token) return;
-    const registry = globalThis as any;
-
-    if (registry.__gabeeTelegramInterval) {
-      console.log('[Telegram] Poller ya activo, se reutiliza');
-      return;
-    }
-
-    registry.__gabeeTelegramStopPolling = () => {
-      if (registry.__gabeeTelegramInterval) {
-        clearInterval(registry.__gabeeTelegramInterval);
-        registry.__gabeeTelegramInterval = null;
-      }
-    };
-
-    void runPoll();
-    registry.__gabeeTelegramInterval = setInterval(() => {
-      void runPoll();
-    }, 2000);
-    if (typeof (registry.__gabeeTelegramInterval as any).unref === 'function') {
-      (registry.__gabeeTelegramInterval as any).unref();
-    }
-    console.log('[Telegram] Poller iniciado', pollerId);
-  };
-
-  const stopPolling = () => {
-    const registry = globalThis as any;
-    if (typeof registry.__gabeeTelegramStopPolling === 'function') {
-      registry.__gabeeTelegramStopPolling();
-      delete registry.__gabeeTelegramStopPolling;
-    }
   };
 
   // En serverless no hay intervalos persistentes: el polling se dispara desde
   // /api/telegram/actions (que el frontend ya consulta cada segundo), con throttle.
   const pollOnceThrottled = async (): Promise<void> => {
-    if (!token) return;
+    if (!token || pollInFlight) return;
     const now = Date.now();
     if (now - lastPollRequestAt < 2000) return;
     lastPollRequestAt = now;
-    await runPoll();
+    pollInFlight = true;
+    try {
+      const leaseUntil = now + 120_000;
+      const offset = await claimTelegramPoll(now, leaseUntil);
+      if (offset === undefined) return;
+
+      try {
+        await pollOnce(offset);
+      } finally {
+        await releaseTelegramPoll(leaseUntil, now + 2000);
+      }
+      health.lastPollAt = Date.now();
+      health.lastError = null;
+      errorStreak = 0;
+    } catch {
+      errorStreak += 1;
+      health.lastError = 'No se pudieron consultar las acciones de Telegram.';
+      if (errorStreak === 1 || errorStreak % 20 === 0) console.warn('[Telegram]', health.lastError);
+    } finally {
+      pollInFlight = false;
+    }
   };
 
-  const status = () => ({
-    configured: Boolean(token),
-    chatLinked: Boolean(resolveChatId()),
-    chatId: resolveChatId() || null,
-    lastPollAt: health.lastPollAt,
-    lastError: health.lastError,
-    pendingActions: state.actions.length,
-  });
+  const status = async () => {
+    const state = await readTelegramState();
+    return {
+      configured: Boolean(token),
+      chatLinked: Boolean(configuredChatId || state.chatId),
+      chatId: null,
+      lastPollAt: health.lastPollAt,
+      lastError: health.lastError,
+      pendingActions: state.actions.length,
+    };
+  };
 
-  const actions = () => ({ actions: state.actions.slice(-MAX_ACTIONS) });
+  const actions = async () => ({ actions: await readTelegramActions() });
 
   const notifyStoreOrder = async (req: ApiRequest, res: ApiResponse): Promise<void> => {
         try {
@@ -661,11 +556,11 @@ export function getTelegramService(): TelegramService {
             sendJson(res, 200, { success: false, linked: false, warning: result.message });
             return;
           }
-          registerMessage('store', targetId, text, result.message);
+          await registerMessage('store', targetId, text, result.message);
           sendJson(res, 200, { success: true });
-        } catch (err: any) {
-          console.error('[Telegram · Tienda]', err?.message || err);
-          sendJson(res, 500, { success: false, error: err?.message || 'Error al notificar la compra.' });
+        } catch {
+          console.error('[Telegram · Tienda] Error al notificar la compra.');
+          sendJson(res, 502, { success: false, error: 'Error al notificar la compra.' });
         }
   };
 
@@ -689,11 +584,11 @@ export function getTelegramService(): TelegramService {
             sendJson(res, 200, { success: false, linked: false, warning: result.message });
             return;
           }
-          registerMessage('recharge', targetId, text, result.message);
+          await registerMessage('recharge', targetId, text, result.message);
           sendJson(res, 200, { success: true });
-        } catch (err: any) {
-          console.error('[Telegram · Recarga]', err?.message || err);
-          sendJson(res, 500, { success: false, error: err?.message || 'Error al notificar la recarga.' });
+        } catch {
+          console.error('[Telegram · Recarga] Error al notificar la recarga.');
+          sendJson(res, 502, { success: false, error: 'Error al notificar la recarga.' });
         }
   };
 
@@ -717,11 +612,11 @@ export function getTelegramService(): TelegramService {
             sendJson(res, 200, { success: false, linked: result.linked === true, warning: result.message });
             return;
           }
-          registerMessage('appointment', targetId, text, result.message);
+          await registerMessage('appointment', targetId, text, result.message);
           sendJson(res, 200, { success: true });
-        } catch (err: any) {
-          console.error('[Telegram · Cita/Pedido]', err?.message || err);
-          sendJson(res, 500, { success: false, error: err?.message || 'Error al notificar la cita/pedido.' });
+        } catch {
+          console.error('[Telegram · Cita/Pedido] Error al notificar la cita/pedido.');
+          sendJson(res, 502, { success: false, error: 'Error al notificar la cita/pedido.' });
         }
   };
 
@@ -732,8 +627,6 @@ export function getTelegramService(): TelegramService {
     notifyRecharge,
     notifyAppointment,
     pollOnceThrottled,
-    startPolling,
-    stopPolling,
   };
   return singleton;
 }

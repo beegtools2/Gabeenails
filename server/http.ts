@@ -1,16 +1,20 @@
 /// <reference types="node" />
-import type { IncomingMessage, ServerResponse } from 'http';
+import type { IncomingMessage } from 'http';
+import type { Readable } from 'node:stream';
 
 /** Tipos mínimos compatibles con el middleware de Vite y con Vercel Functions. */
-export type ApiRequest = IncomingMessage & {
+export type ApiRequest = Pick<IncomingMessage, 'method' | 'url'> & Pick<Readable, 'on'> & {
   body?: any;
-  query?: any;
+  waitUntil?: (work: Promise<unknown>) => void;
 };
 
-export type ApiResponse = ServerResponse & {
-  status?: (statusCode: number) => ApiResponse;
-  json?: (payload: unknown) => ApiResponse;
+export type ApiResponse = {
+  statusCode: number;
+  setHeader(name: string, value: string): unknown;
+  end(body: string): unknown;
 };
+
+export type ApiHandler = (req: ApiRequest, res: ApiResponse) => void | Promise<void>;
 
 export function sendJson(res: ApiResponse, statusCode: number, payload: unknown): void {
   res.statusCode = statusCode;
@@ -33,35 +37,39 @@ export async function readJsonBody(
   req: ApiRequest,
   maxBytes = 0
 ): Promise<{ data: any; tooLarge: boolean }> {
+  const parse = (body: string) => {
+    try {
+      const data = JSON.parse(body);
+      return data && typeof data === 'object' ? data : {};
+    } catch {
+      return {};
+    }
+  };
+
   if (req.body !== undefined && req.body !== null) {
     if (typeof req.body === 'string') {
-      try {
-        return { data: JSON.parse(req.body || '{}'), tooLarge: false };
-      } catch {
-        return { data: {}, tooLarge: false };
-      }
+      if (maxBytes > 0 && Buffer.byteLength(req.body) > maxBytes) return { data: {}, tooLarge: true };
+      return { data: parse(req.body), tooLarge: false };
     }
     return { data: req.body, tooLarge: false };
   }
 
   return new Promise((resolve) => {
     let body = '';
+    let bytes = 0;
     let tooLarge = false;
-    req.on('data', (chunk: any) => {
+    req.on('data', (chunk: string | Buffer) => {
       if (tooLarge) return;
-      body += chunk;
-      if (maxBytes > 0 && Buffer.byteLength(body, 'utf8') > maxBytes) tooLarge = true;
+      bytes += Buffer.byteLength(chunk);
+      tooLarge = maxBytes > 0 && bytes > maxBytes;
+      if (!tooLarge) body += chunk;
     });
     req.on('end', () => {
       if (tooLarge) {
         resolve({ data: {}, tooLarge: true });
         return;
       }
-      try {
-        resolve({ data: JSON.parse(body || '{}'), tooLarge: false });
-      } catch {
-        resolve({ data: {}, tooLarge: false });
-      }
+      resolve({ data: parse(body), tooLarge: false });
     });
     req.on('error', () => resolve({ data: {}, tooLarge: false }));
   });
