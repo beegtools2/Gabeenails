@@ -99,7 +99,7 @@ export const BirthdayRouletteModal: React.FC<BirthdayRouletteModalProps> = ({ is
         <div
           className="px-5 py-4 border-b border-[#E8DEC9] flex items-center justify-between"
           style={{
-            backgroundImage: "url('/assets/aistudio/Inicio_5d3704_dd6e8988.png')",
+            backgroundImage: 'var(--site-window-pattern)',
             backgroundSize: '200px auto',
             backgroundPosition: 'center',
             backgroundRepeat: 'repeat',

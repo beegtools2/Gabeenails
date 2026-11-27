@@ -229,8 +229,6 @@ export interface StudioSettings {
   studioAddress: string;
   studioCity: string;
   timezone: string;
-  /** Contraseña del panel /admin, editable en "Configuración y Tarifas". */
-  adminPassword: string;
   sizeStock?: {
     XS: boolean;
     S: boolean;

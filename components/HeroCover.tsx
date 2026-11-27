@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
+import { SiteImage } from '../context/SiteImagesContext';
 import { GabeeLogo } from './GabeeLogo';
 import { BeeCoinIcon } from './BeeCoinIcon';
 import {
@@ -19,8 +20,6 @@ import { PromoCatalog } from './PromoCatalog';
 import { CoursesSection } from './CoursesSection';
 import { CuidadoBienestarSection } from './CuidadoBienestarSection';
 import { ReviewsSection } from './ReviewsSection';
-
-const ORIGINAL_LOGO = '/assets/aistudio/Logo original.png';
 
 export const HeroCover: React.FC = () => {
   const {
@@ -50,8 +49,8 @@ export const HeroCover: React.FC = () => {
           {/* Logo original.png tal cual: PNG limpio con transparencia real,
               sin procesamiento de píxeles ni filtros. */}
           <div className="mb-0 flex justify-center">
-            <img
-              src={ORIGINAL_LOGO}
+            <SiteImage
+              imageKey="hero-logo"
               alt="Gabee Studio - Logo Original"
               className="h-60 sm:h-80 md:h-96 w-auto max-w-full object-contain bg-transparent select-none drop-shadow-sm hover:scale-105 transition-transform duration-300"
             />
@@ -219,8 +218,8 @@ export const HeroCover: React.FC = () => {
               {/* 3 Prominent Reference Cards for the 3 Sets */}
               <div className="space-y-3 mb-6">
                 <div className="rounded-2xl overflow-hidden border border-[#E6DBC9] shadow-xs relative h-72 sm:h-80 w-full bg-[#FAF7F2]">
-                  <img
-                    src="/assets/aistudio/PRESS ON NAILS.jpeg"
+                  <SiteImage
+                    imageKey="press-on-cover"
                     alt="Press On Nails - Diseños Artísticos Gabee Studio"
                     className="w-full h-full object-cover object-center select-none"
                   />

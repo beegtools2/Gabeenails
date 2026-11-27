@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { SiteImage } from '../context/SiteImagesContext';
 import { GabeeLogo } from './GabeeLogo';
 import {
   X,
@@ -11,17 +12,17 @@ import {
 } from 'lucide-react';
 
 const TERMINOS_IMAGES = [
-  { image: '/assets/aistudio/IMG_9360_1bdc15b7.PNG', title: 'Portada - Términos y Condiciones Gabee Studio' },
-  { image: '/assets/aistudio/IMG_9361_aba21d4b.PNG', title: 'Política - Diseño Cotizado, Tardanza y Cancelación' },
-  { image: '/assets/aistudio/IMG_9362_07aa3036.PNG', title: 'Normas - Uñas Personalizadas, Acompañantes y Tiempo' },
-  { image: '/assets/aistudio/IMG_9363_3d2b4614.PNG', title: 'Tener en Cuenta - Adherencia, Hongos y Salud Ungueal' },
-];
+  { image: 'terms-1', title: 'Portada - Términos y Condiciones Gabee Studio' },
+  { image: 'terms-2', title: 'Política - Diseño Cotizado, Tardanza y Cancelación' },
+  { image: 'terms-3', title: 'Normas - Uñas Personalizadas, Acompañantes y Tiempo' },
+  { image: 'terms-4', title: 'Tener en Cuenta - Adherencia, Hongos y Salud Ungueal' },
+] as const;
 
 const BENEFICIOS_IMAGES = [
-  { image: '/assets/aistudio/page_beneficios_01.png', title: 'Beneficios en Gabee Studio' },
-  { image: '/assets/aistudio/page_beneficios_02.png', title: 'Garantía del Servicio' },
-  { image: '/assets/aistudio/page_beneficios_03.png', title: 'Mantenimiento Puntual' },
-];
+  { image: 'benefits-1', title: 'Beneficios en Gabee Studio' },
+  { image: 'benefits-2', title: 'Garantía del Servicio' },
+  { image: 'benefits-3', title: 'Mantenimiento Puntual' },
+] as const;
 
 export const TermsModal: React.FC = () => {
   const { showTermsModal, setShowTermsModal, flipbookType, openBooking, setCurrentView, currentView } = useApp();
@@ -104,8 +105,8 @@ export const TermsModal: React.FC = () => {
       >
         {/* Slide (single clean plate) */}
         <div className="relative">
-          <img
-            src={currentImages[pageIndex].image}
+          <SiteImage
+            imageKey={currentImages[pageIndex].image}
             alt={currentImages[pageIndex].title}
             className={`block w-auto h-auto max-w-[92vw] max-h-[78vh] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.45),0_0_24px_rgba(212,175,55,0.18)] border border-[#D4AF37]/30 bg-[#FAF7F2] select-none transition-opacity duration-300 ${
               fading ? 'opacity-0' : 'opacity-100'

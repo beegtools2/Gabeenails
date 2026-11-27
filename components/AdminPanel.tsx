@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { ImageLightbox } from './ImageLightbox';
+import { ADMIN_PASSWORD_MAX_LENGTH, ADMIN_PASSWORD_MIN_LENGTH, ADMIN_SESSION_ENDPOINT } from '../data/adminSession';
 import { formatLocalIsoDate, getLocalTomorrowIso, formatHumanLocalDate } from '../utils/dateUtils';
 import {
   PromoDesign,
@@ -98,12 +99,16 @@ const SERVICE_SYSTEM_LABELS: Record<string, string> = {
   acrilicas: 'Uñas Acrílicas',
 };
 
+const SiteImagesSettings = React.lazy(() => import('./SiteImagesSettings'));
+
 interface AdminPanelProps {
   /** Cierra la sesión de administrador y vuelve a la tienda pública (/). */
   onExitAdmin?: () => void | Promise<void>;
+  onSessionExpired: () => void;
+  imagePreviewOnly: boolean;
 }
 
-export const AdminPanel: React.FC<AdminPanelProps> = ({ onExitAdmin }) => {
+export const AdminPanel: React.FC<AdminPanelProps> = ({ onExitAdmin, onSessionExpired, imagePreviewOnly }) => {
   const {
     appointments,
     createAppointment,
@@ -630,6 +635,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExitAdmin }) => {
   // Settings Form State
   const [settingsForm, setSettingsForm] = useState<StudioSettings>({ ...settings });
   const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [newAdminPassword, setNewAdminPassword] = useState('');
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   // Show Toast
   const triggerToast = (msg: string) => {
@@ -1855,17 +1862,37 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExitAdmin }) => {
   // =====================
   // CONFIGURACIÓN (GRABAR & RESTABLECER)
   // =====================
-  const handleSaveSettings = (e: React.FormEvent) => {
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newPassword = (settingsForm.adminPassword || '').trim();
-    if (!newPassword) {
-      triggerToast('⚠ Ingresa una contraseña para el panel /admin.');
-      return;
+    if (isSavingSettings) return;
+    if (newAdminPassword && !imagePreviewOnly) {
+      setIsSavingSettings(true);
+      try {
+        const response = await fetch(ADMIN_SESSION_ENDPOINT, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: newAdminPassword }),
+        });
+        if (response.status === 401) {
+          onSessionExpired();
+          return;
+        }
+        if (response.status === 400) {
+          triggerToast(`⚠ Usa una contraseña de ${ADMIN_PASSWORD_MIN_LENGTH} a ${ADMIN_PASSWORD_MAX_LENGTH} caracteres.`);
+          return;
+        }
+        if (response.status !== 204) throw new Error('Admin password change failed');
+        setNewAdminPassword('');
+        setShowAdminPassword(false);
+      } catch {
+        triggerToast('⚠ No se pudo cambiar la contraseña del panel. Inténtalo de nuevo.');
+        return;
+      } finally {
+        setIsSavingSettings(false);
+      }
     }
-    const updated = { ...settingsForm, adminPassword: newPassword };
-    setSettingsForm(updated);
-    updateSettings(updated);
-    triggerToast('✓ Configuración guardada. La nueva contraseña ya está activa.');
+    updateSettings(settingsForm);
+    triggerToast(newAdminPassword ? '✓ Configuración guardada. La nueva contraseña ya está activa.' : '✓ Configuración guardada.');
   };
 
   // =====================
@@ -1916,6 +1943,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExitAdmin }) => {
     } else if (deleteConfirmation.type === 'reset_settings') {
       resetSettings();
       setSettingsForm({ ...settings });
+      setNewAdminPassword('');
       triggerToast('✓ Ajustes restaurados a los valores iniciales.');
     }
     setDeleteConfirmation(null);
@@ -1980,7 +2008,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExitAdmin }) => {
               type="button"
               onClick={() => {
                 if (onExitAdmin) {
-                  void onExitAdmin();
+                  void Promise.resolve(onExitAdmin()).catch(() => triggerToast('⚠ No se pudo cerrar la sesión. Inténtalo de nuevo.'));
                   return;
                 }
                 setIsAdmin(false);
@@ -4217,6 +4245,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExitAdmin }) => {
         {/* TAB 4: Studio Settings (Grabar, Modificar, Restablecer) */}
         {/* ========================================================= */}
         {activeTab === 'settings' && (
+          <div className="space-y-6">
+            <React.Suspense fallback={<p role="status" className="text-xs text-[#7A6655]">Cargando gestión de imágenes…</p>}>
+              <SiteImagesSettings onSessionExpired={onSessionExpired} previewOnly={imagePreviewOnly} />
+            </React.Suspense>
           <form onSubmit={handleSaveSettings} className="space-y-6">
             <div className="p-6 rounded-3xl bg-white border border-[#E7DDCE] shadow-2xs space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#EFE7DC] pb-4">
@@ -4232,6 +4264,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExitAdmin }) => {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
+                    disabled={isSavingSettings}
                     onClick={() =>
                       setDeleteConfirmation({
                         type: 'reset_settings',
@@ -4246,10 +4279,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExitAdmin }) => {
 
                   <button
                     type="submit"
+                    disabled={isSavingSettings}
                     className="py-2.5 px-5 rounded-xl bg-[#FDFBF7] border border-[#C5A059] hover:bg-[#F2E5D5] text-[#5D3704] text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all"
                   >
                     <Save className="w-3.5 h-3.5 text-[#C89D3C]" />
-                    <span>Guardar Cambios (Grabar)</span>
+                    <span>{isSavingSettings ? 'Guardando…' : 'Guardar Cambios (Grabar)'}</span>
                   </button>
                 </div>
               </div>
@@ -4281,21 +4315,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExitAdmin }) => {
                     className="block text-xs font-bold text-[#5D3704] flex items-center gap-1.5"
                   >
                     <ShieldCheck className="w-4 h-4 text-[#C89D3C]" />
-                    <span>Contraseña del Panel /admin *</span>
+                    <span>Contraseña del Panel /admin</span>
                   </label>
                   <p className="text-[11px] text-[#7A6655] leading-relaxed">
-                    Valor inicial: <span className="font-mono font-bold">1234</span>. Al guardar, la
-                    contraseña anterior deja de funcionar de inmediato y esta nueva se usa en el login.
+                    {imagePreviewOnly
+                      ? 'El cambio de contraseña está disponible cuando se configura el acceso privado al panel.'
+                      : `Déjala en blanco para conservar la actual. Para cambiarla, ingresa una nueva de al menos ${ADMIN_PASSWORD_MIN_LENGTH} caracteres y guarda los cambios.`}
                   </p>
                   <div className="relative">
                     <input
                       id="admin-password-setting"
                       type={showAdminPassword ? 'text' : 'password'}
-                      required
-                      value={settingsForm.adminPassword || ''}
-                      onChange={(e) =>
-                        setSettingsForm((prev) => ({ ...prev, adminPassword: e.target.value }))
-                      }
+                      minLength={ADMIN_PASSWORD_MIN_LENGTH}
+                      maxLength={ADMIN_PASSWORD_MAX_LENGTH}
+                      value={newAdminPassword}
+                      onChange={(e) => setNewAdminPassword(e.target.value)}
+                      disabled={isSavingSettings || imagePreviewOnly}
                       autoComplete="new-password"
                       className="w-full p-2.5 pr-10 rounded-xl border border-[#DDD1BF] bg-white text-xs font-mono font-bold text-[#5D3704]"
                     />
@@ -4675,6 +4710,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExitAdmin }) => {
 
             </div>
           </form>
+          </div>
         )}
 
         {/* ========================================================= */}
@@ -8839,7 +8875,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExitAdmin }) => {
             className="p-6 rounded-3xl border-2 border-[#D4AF37] relative overflow-hidden shadow-sm"
             style={{
               backgroundColor: '#FAF7F2',
-              backgroundImage: "url('/assets/aistudio/Inicio_5d3704_dd6e8988.png')",
+              backgroundImage: 'var(--site-window-pattern)',
               backgroundSize: '200px auto',
               backgroundPosition: 'center',
               backgroundRepeat: 'repeat',

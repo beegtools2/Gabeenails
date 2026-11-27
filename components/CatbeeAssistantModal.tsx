@@ -6,6 +6,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { SiteImage } from '../context/SiteImagesContext';
 import { DEFAULT_CATBEE_CONFIG } from '../data/catalogData';
 
 interface ChatMessage {
@@ -535,8 +536,8 @@ Para esta consulta específica o detalles a medida, puedes ponerte en contacto d
           <div className="absolute inset-0 rounded-full bg-[#D4AF37]/25 blur-xl scale-125 opacity-70 group-hover:opacity-100 group-hover:scale-140 group-active:scale-150 transition-all duration-300 pointer-events-none animate-pulse" />
 
           {/* Ilustración de Catbee con fondo transparente flotando directamente en la esquina */}
-          <img
-            src="/assets/aistudio/gatobeja_transparent.png"
+          <SiteImage
+            imageKey="catbee-floating"
             alt="Catbee"
             className="w-full h-full object-contain pointer-events-none transition-all duration-300 drop-shadow-[0_4px_12px_rgba(93,55,4,0.3)] group-hover:drop-shadow-[0_0_20px_rgba(212,175,55,0.85)] group-active:drop-shadow-[0_0_24px_rgba(212,175,55,1)]"
           />
@@ -552,7 +553,7 @@ Para esta consulta específica o detalles a medida, puedes ponerte en contacto d
           <div
             className="px-4 py-3 border-b border-[#D4AF37] text-[#5D3704] flex items-center justify-between shrink-0 shadow-xs relative rounded-t-3xl"
             style={{
-              backgroundImage: "url('/assets/aistudio/Inicio_5d3704_dd6e8988.png')",
+              backgroundImage: 'var(--site-window-pattern)',
               backgroundSize: '200px auto',
               backgroundPosition: 'center',
               backgroundRepeat: 'repeat',
@@ -561,8 +562,8 @@ Para esta consulta específica o detalles a medida, puedes ponerte en contacto d
             <div className="flex items-center gap-2.5 bg-[#FAF7F2]/90 backdrop-blur-xs px-3 py-1.5 rounded-2xl border border-[#D4AF37]/50 shadow-2xs">
               {/* Avatar circular limpio de Catbee con borde dorado centrado en su carita */}
               <div className="relative w-10 h-10 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-[#FAF4EB] shrink-0 shadow-xs flex items-center justify-center">
-                <img
-                  src="/assets/aistudio/catbee_avatar.png"
+                <SiteImage
+                  imageKey="catbee-chat"
                   alt="Catbee"
                   className="w-full h-full object-cover"
                 />
@@ -616,8 +617,8 @@ Para esta consulta específica o detalles a medida, puedes ponerte en contacto d
                   <div className="flex items-end gap-2 max-w-[88%]">
                     {isCatbee && (
                       <div className="w-7 h-7 rounded-full border border-[#D4AF37] overflow-hidden bg-[#FAF4EB] shrink-0 mb-1 flex items-center justify-center shadow-xs">
-                        <img
-                          src="/assets/aistudio/catbee_avatar.png"
+                        <SiteImage
+                          imageKey="catbee-chat"
                           alt="Catbee"
                           className="w-full h-full object-cover"
                         />
@@ -703,8 +704,8 @@ Para esta consulta específica o detalles a medida, puedes ponerte en contacto d
             {isTyping && (
               <div className="flex items-center gap-2 text-xs font-['Marcellus'] text-[#8C6B1C] bg-[#FDFBF7] border border-[#C5A059]/40 p-2.5 rounded-2xl w-fit shadow-2xs animate-pulse">
                 <div className="w-6 h-6 rounded-full border border-[#D4AF37] overflow-hidden bg-[#FAF4EB] shrink-0 flex items-center justify-center">
-                  <img
-                    src="/assets/aistudio/catbee_avatar.png"
+                  <SiteImage
+                    imageKey="catbee-chat"
                     alt="Catbee"
                     className="w-full h-full object-cover"
                   />

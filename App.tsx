@@ -24,11 +24,10 @@ import { StoreModal } from './components/StoreModal';
 import { CatbeeAssistantModal } from './components/CatbeeAssistantModal';
 import { Preloader } from './components/Preloader';
 import { Footer } from './components/Footer';
-import {
-  clearAdminSession,
-  createAdminSession,
-  isAdminSessionValid,
-} from './utils/adminPasswordUtils';
+import { ADMIN_SESSION_ENDPOINT } from './data/adminSession';
+import { clearLegacyAdminSession, hasLegacyAdminSession } from './utils/legacyAdminPreview';
+
+const SiteImagesSettings = React.lazy(() => import('./components/SiteImagesSettings'));
 
 const MainContent: React.FC = () => {
   const {
@@ -156,8 +155,6 @@ const MainContent: React.FC = () => {
   }, [allUsers, currentUser, updateUserProfile]);
 
   // ── RUTA PRIVADA /admin ──────────────────────────────────────────────────
-  // El panel solo existe en /admin. La sesión se valida contra la contraseña
-  // persistida por "Configuración y Tarifas", sin depender del servidor.
   const isAdminPath = (pathname: string) => {
     const normalized = pathname.replace(/\/+$/, '') || '/';
     return normalized === '/admin';
@@ -166,16 +163,21 @@ const MainContent: React.FC = () => {
   const [isAdminRoute, setIsAdminRoute] = useState<boolean>(() =>
     isAdminPath(window.location.pathname)
   );
-  const [adminAuth, setAdminAuth] = useState<'checking' | 'authenticated' | 'anonymous'>(() =>
+  const [adminAuth, setAdminAuth] = useState<'checking' | 'authenticated' | 'anonymous' | 'image-preview'>(() =>
     isAdminPath(window.location.pathname) ? 'checking' : 'anonymous'
   );
+  const [adminPreviewOnly, setAdminPreviewOnly] = useState(false);
+  const [adminSessionExpired, setAdminSessionExpired] = useState(false);
   const currentViewRef = useRef(currentView);
   currentViewRef.current = currentView;
 
   useEffect(() => {
-    const syncAdminRoute = () => {
+    let pendingCheck: AbortController | undefined;
+    const syncAdminRoute = async () => {
+      pendingCheck?.abort();
       const adminRoute = isAdminPath(window.location.pathname);
       setIsAdminRoute(adminRoute);
+      setAdminPreviewOnly(false);
 
       if (!adminRoute) {
         setAdminAuth('anonymous');
@@ -186,44 +188,65 @@ const MainContent: React.FC = () => {
 
       setIsAdmin(false);
       if (currentViewRef.current === 'admin') setCurrentView('home');
+      setAdminAuth('checking');
 
-      if (isAdminSessionValid()) {
-        setAdminAuth('authenticated');
-        setIsAdmin(true);
-        setCurrentView('admin');
-      } else {
-        clearAdminSession();
-        setAdminAuth('anonymous');
+      const controller = new AbortController();
+      pendingCheck = controller;
+      try {
+        const response = await fetch(ADMIN_SESSION_ENDPOINT, { signal: controller.signal, cache: 'no-store' });
+        const previewOnly = response.status === 200 && (await response.json())?.mode === 'preview';
+        if (controller.signal.aborted) return;
+        setAdminPreviewOnly(previewOnly);
+        if (response.status === 204 || (previewOnly && hasLegacyAdminSession())) {
+          setAdminAuth('authenticated');
+          setIsAdmin(true);
+          setCurrentView('admin');
+        } else {
+          setAdminAuth('anonymous');
+        }
+      } catch {
+        if (!controller.signal.aborted) setAdminAuth('anonymous');
       }
     };
 
-    syncAdminRoute();
+    void syncAdminRoute();
     window.addEventListener('popstate', syncAdminRoute);
-    return () => window.removeEventListener('popstate', syncAdminRoute);
+    return () => {
+      pendingCheck?.abort();
+      window.removeEventListener('popstate', syncAdminRoute);
+    };
   }, [setCurrentView, setIsAdmin]);
 
   const handleAdminAuthenticated = () => {
     if (!isAdminPath(window.location.pathname)) {
       window.history.pushState({}, '', '/admin');
     }
-    createAdminSession();
+    setAdminSessionExpired(false);
     setAdminAuth('authenticated');
     setIsAdmin(true);
     setCurrentView('admin');
   };
 
-  const handleAdminExit = () => {
-    clearAdminSession();
+  const handleAdminExit = async () => {
+    if (adminPreviewOnly) {
+      clearLegacyAdminSession();
+    } else {
+      const response = await fetch(ADMIN_SESSION_ENDPOINT, { method: 'DELETE' });
+      if (response.status !== 204) throw new Error('Admin logout failed');
+    }
+    handleBackToStore();
+  };
+
+  const handleAdminSessionExpired = () => {
+    setAdminSessionExpired(true);
     setAdminAuth('anonymous');
     setIsAdmin(false);
-    setIsAdminRoute(false);
     setCurrentView('home');
-    window.history.pushState({}, '', '/');
     window.scrollTo({ top: 0 });
   };
 
   const handleBackToStore = () => {
-    clearAdminSession();
+    setAdminSessionExpired(false);
     setAdminAuth('anonymous');
     setIsAdmin(false);
     setIsAdminRoute(false);
@@ -289,11 +312,22 @@ const MainContent: React.FC = () => {
               </div>
             </div>
           ) : adminAuth === 'authenticated' ? (
-            <AdminPanel onExitAdmin={handleAdminExit} />
+            <AdminPanel onExitAdmin={handleAdminExit} onSessionExpired={handleAdminSessionExpired} imagePreviewOnly={adminPreviewOnly} />
+          ) : adminAuth === 'image-preview' && adminPreviewOnly ? (
+            <div className="mx-auto max-w-6xl space-y-4 px-4 py-6">
+              <button type="button" className="text-sm font-semibold text-[#5D3704] underline" onClick={() => setAdminAuth('anonymous')}>
+                Salir de la vista previa
+              </button>
+              <React.Suspense fallback={<p role="status">Cargando vista previa…</p>}>
+                <SiteImagesSettings previewOnly onSessionExpired={handleAdminSessionExpired} />
+              </React.Suspense>
+            </div>
           ) : (
             <AdminLogin
               onAuthenticated={handleAdminAuthenticated}
               onBackToStore={handleBackToStore}
+              onImagePreview={adminPreviewOnly ? () => setAdminAuth('image-preview') : undefined}
+              sessionExpired={adminSessionExpired}
             />
           )
         ) : (

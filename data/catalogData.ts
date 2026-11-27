@@ -31,7 +31,6 @@ export const INITIAL_SETTINGS: StudioSettings = {
   studioAddress: "EN ESTUDIO • JESUS MARIA (La dirección se te enviará por WhatsApp tras confirmar tu adelanto)",
   studioCity: "Jesús María, Lima",
   timezone: "America/Lima (GMT -05:00)",
-  adminPassword: "1234",
   sizeStock: {
     XS: true,
     S: true,
