@@ -1,67 +1,40 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Eye, EyeOff, LockKeyhole, ShieldCheck } from 'lucide-react';
-import { ADMIN_PASSWORD_MAX_LENGTH, ADMIN_SESSION_ENDPOINT } from '../data/adminSession';
-import { hasLegacyAdminPassword, loginLegacyAdmin } from '../utils/legacyAdminPreview';
+import { checkAdminPassword } from '../utils/adminPasswordUtils';
 
 interface AdminLoginProps {
   onAuthenticated: () => void;
   onBackToStore: () => void;
-  onImagePreview?: () => void;
-  sessionExpired: boolean;
 }
 
+/**
+ * Pantalla de acceso exclusiva de /admin.
+ * Valida contra la contraseña persistida por "Configuración y Tarifas".
+ * No hace llamadas al servidor: funciona aunque el backend no esté disponible.
+ */
 export const AdminLogin: React.FC<AdminLoginProps> = ({
   onAuthenticated,
   onBackToStore,
-  onImagePreview,
-  sessionExpired,
 }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return;
     if (!password) {
       setError('Ingresa la contraseña de administrador.');
       return;
     }
 
-    if (onImagePreview) {
-      if (loginLegacyAdmin(password)) {
-        setPassword('');
-        onAuthenticated();
-      } else {
-        setError('Contraseña incorrecta.');
-      }
+    if (!checkAdminPassword(password)) {
+      setError('Contraseña incorrecta.');
       return;
     }
 
-    setIsSubmitting(true);
     setError('');
-    try {
-      const response = await fetch(ADMIN_SESSION_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
-      });
-      if (response.status === 204) {
-        setPassword('');
-        onAuthenticated();
-      } else if (response.status === 401) {
-        setError('Contraseña incorrecta.');
-      } else if (response.status === 429) {
-        setError('Demasiados intentos. Espera un minuto antes de volver a ingresar.');
-      } else {
-        setError('No se pudo verificar el acceso al panel. Inténtalo de nuevo.');
-      }
-    } catch {
-      setError('No se pudo conectar con el panel. Inténtalo de nuevo.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    setPassword('');
+    onAuthenticated();
   };
 
   return (
@@ -90,13 +63,11 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
             <h1 className="text-center text-xl sm:text-2xl font-['Cinzel'] font-bold text-[#5D3704]">
               Panel de Administración
             </h1>
-            {(!onImagePreview || hasLegacyAdminPassword) && (
-              <p className="mt-2 text-center text-xs sm:text-sm font-['Marcellus'] text-[#7A614A] leading-relaxed">
-                Ingresa la contraseña de administrador para gestionar citas, diseños, pedidos y configuración del estudio.
-              </p>
-            )}
+            <p className="mt-2 text-center text-xs sm:text-sm font-['Marcellus'] text-[#7A614A] leading-relaxed">
+              Ingresa la contraseña de administrador para gestionar citas, diseños, pedidos y configuración del estudio.
+            </p>
 
-            {(!onImagePreview || hasLegacyAdminPassword) && <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
               <div>
                 <label
                   htmlFor="admin-password"
@@ -116,8 +87,6 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
                     }}
                     placeholder="••••••••••••"
                     autoComplete="current-password"
-                    maxLength={ADMIN_PASSWORD_MAX_LENGTH}
-                    disabled={isSubmitting}
                     autoFocus
                     className="w-full pl-10 pr-11 py-3 rounded-xl border border-[#DFC89E] bg-[#FAF7F2] text-sm text-[#5D3704] placeholder:text-[#A89175]/70 focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/25 transition-all"
                   />
@@ -132,30 +101,20 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
                   </button>
                 </div>
 
-                {(error || sessionExpired) && (
+                {error && (
                   <p className="mt-2 text-xs font-['Cinzel'] font-bold text-rose-700 text-center" role="alert">
-                    {error || 'Tu sesión terminó. Ingresa nuevamente al panel.'}
+                    {error}
                   </p>
                 )}
               </div>
 
               <button
                 type="submit"
-                disabled={isSubmitting}
                 className="w-full py-3 px-4 rounded-full border border-[#C89D3C] bg-[#FFFEFA] text-[#5D3704] text-xs font-['Cinzel'] font-bold uppercase tracking-widest shadow-[0_6px_18px_rgba(107,67,36,0.14)] hover:bg-white hover:border-[#D4AF37] hover:text-[#8C6B1C] transition-all cursor-pointer"
               >
-                {isSubmitting ? 'Ingresando…' : 'Ingresar al panel'}
+                Ingresar al panel
               </button>
-            </form>}
-
-            {onImagePreview && (
-              <div className="mt-6 space-y-2 text-center">
-                <p className="text-xs text-[#7A614A]">El acceso con publicación aún no está configurado. La vista previa no modifica el sitio.</p>
-                <button type="button" className="text-sm font-semibold text-[#5D3704] underline" onClick={onImagePreview}>
-                  Abrir vista previa de imágenes
-                </button>
-              </div>
-            )}
+            </form>
 
             <div className="mt-6 pt-4 border-t border-[#D4AF37]/25">
               <button

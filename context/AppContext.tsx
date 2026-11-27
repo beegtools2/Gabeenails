@@ -44,6 +44,10 @@ import {
   sanitizeReviews,
 } from '../utils/reviewUtils';
 import {
+  DEFAULT_ADMIN_PASSWORD,
+  persistAdminPassword,
+} from '../utils/adminPasswordUtils';
+import {
   googleSignIn,
   googleLogout,
   initAuth,
@@ -286,12 +290,6 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const SETTINGS_STORAGE_KEY = 'gabee_nail_studio_settings_v1';
-
-function withoutLegacyAdminPassword(settings: Partial<StudioSettings> & { adminPassword?: unknown }): Partial<StudioSettings> {
-  const cleaned = { ...settings };
-  delete cleaned.adminPassword;
-  return cleaned;
-}
 const PROMOS_STORAGE_KEY = 'gabee_nail_studio_promos_v1';
 const APPOINTMENTS_STORAGE_KEY = 'gabee_nail_studio_appointments_v1';
 const ADDITIONALS_STORAGE_KEY = 'gabee_nail_studio_additionals_v1';
@@ -852,9 +850,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
       if (!saved) return INITIAL_SETTINGS;
       const parsed = JSON.parse(saved);
-      const merged = { ...INITIAL_SETTINGS, ...withoutLegacyAdminPassword(parsed) };
-      if (parsed && Object.hasOwn(parsed, 'adminPassword')) safeSetLocalStorage(SETTINGS_STORAGE_KEY, JSON.stringify(merged));
-      return merged;
+      return {
+        ...INITIAL_SETTINGS,
+        ...parsed,
+        adminPassword: parsed.adminPassword || DEFAULT_ADMIN_PASSWORD,
+      };
     } catch {
       return INITIAL_SETTINGS;
     }
@@ -1053,7 +1053,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (stg) {
           const merged: StudioSettings = {
             ...INITIAL_SETTINGS,
-            ...withoutLegacyAdminPassword(stg),
+            ...stg,
+            adminPassword: stg.adminPassword || DEFAULT_ADMIN_PASSWORD,
           };
           setSettings(merged);
           safeSetLocalStorage(SETTINGS_STORAGE_KEY, JSON.stringify(merged));
@@ -1937,8 +1938,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const updateSettings = (newSettings: Partial<StudioSettings>) => {
+    const normalized: Partial<StudioSettings> =
+      typeof newSettings.adminPassword === 'string'
+        ? { ...newSettings, adminPassword: newSettings.adminPassword.trim() }
+        : newSettings;
+
+    // La contraseña se escribe primero en la clave dedicada: así el login la
+    // ve de inmediato aunque Firestore falle o responda tarde.
+    if (normalized.adminPassword) {
+      persistAdminPassword(normalized.adminPassword);
+    }
+
     setSettings((prev) => {
-      const updated = { ...prev, ...withoutLegacyAdminPassword(newSettings) };
+      const updated = { ...prev, ...normalized };
       safeSetLocalStorage(SETTINGS_STORAGE_KEY, JSON.stringify(updated));
       saveSettingsToFirestore(updated);
       return updated;
@@ -1946,6 +1958,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const resetSettings = () => {
+    persistAdminPassword(DEFAULT_ADMIN_PASSWORD);
     setSettings(INITIAL_SETTINGS);
     safeSetLocalStorage(SETTINGS_STORAGE_KEY, JSON.stringify(INITIAL_SETTINGS));
     saveSettingsToFirestore(INITIAL_SETTINGS);
