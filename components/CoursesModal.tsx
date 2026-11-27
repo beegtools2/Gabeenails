@@ -48,7 +48,7 @@ export const CoursesModal: React.FC<CoursesModalProps> = ({ isOpen, onClose }) =
           className="px-6 py-4 border-b border-[#E8DEC9] flex items-center justify-between"
           style={{
             backgroundColor: '#FAF7F2',
-            backgroundImage: "url('/assets/aistudio/Inicio_5d3704_dd6e8988.png')",
+            backgroundImage: 'var(--site-window-pattern)',
             backgroundSize: '200px auto',
             backgroundPosition: 'center',
             backgroundRepeat: 'repeat',
@@ -147,7 +147,7 @@ export const CoursesModal: React.FC<CoursesModalProps> = ({ isOpen, onClose }) =
           className="p-4 border-t border-[#E8DEC9] flex items-center justify-between"
           style={{
             backgroundColor: '#FAF7F2',
-            backgroundImage: "url('/assets/aistudio/Inicio_5d3704_dd6e8988.png')",
+            backgroundImage: 'var(--site-window-pattern)',
             backgroundSize: '200px auto',
             backgroundPosition: 'center',
             backgroundRepeat: 'repeat',

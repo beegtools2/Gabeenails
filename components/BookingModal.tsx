@@ -747,7 +747,7 @@ export const BookingModal: React.FC = () => {
       <div
         className="relative border border-[#5D3704]/20 rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden"
         style={{
-          backgroundImage: "url('/assets/aistudio/Inicio_5d3704_dd6e8988.png')",
+          backgroundImage: 'var(--site-window-pattern)',
           backgroundSize: '240px auto',
           backgroundRepeat: 'repeat',
         }}
@@ -760,7 +760,7 @@ export const BookingModal: React.FC = () => {
           className="relative z-10 p-5 sm:p-6 flex items-center justify-between gap-4"
           style={{
             backgroundColor: '#FAF7F2',
-            backgroundImage: "url('/assets/aistudio/Inicio_5d3704_dd6e8988.png')",
+            backgroundImage: 'var(--site-window-pattern)',
             backgroundSize: '200px auto',
             backgroundPosition: 'center',
             backgroundRepeat: 'repeat',
@@ -2194,7 +2194,7 @@ export const BookingModal: React.FC = () => {
             className="relative z-10 p-4 border-t border-[#5D3704]/20 flex items-center justify-between gap-3"
             style={{
               backgroundColor: '#FAF7F2',
-              backgroundImage: "url('/assets/aistudio/Inicio_5d3704_dd6e8988.png')",
+              backgroundImage: 'var(--site-window-pattern)',
               backgroundSize: '200px auto',
               backgroundPosition: 'center',
               backgroundRepeat: 'repeat',

@@ -140,8 +140,6 @@ export const UserAccountModal: React.FC<UserAccountModalProps> = ({
   } | null>(null);
   const [leaveReviewRating, setLeaveReviewRating] = useState<number>(5);
   const [leaveReviewComment, setLeaveReviewComment] = useState<string>('');
-  const [leaveReviewMediaUrl, setLeaveReviewMediaUrl] = useState<string>('');
-  const [leaveReviewMediaType, setLeaveReviewMediaType] = useState<'image'>('image');
   const [leaveReviewSuccessMsg, setLeaveReviewSuccessMsg] = useState<string | null>(null);
   const [leaveReviewErrorMsg, setLeaveReviewErrorMsg] = useState<string | null>(null);
 
@@ -882,19 +880,6 @@ export const UserAccountModal: React.FC<UserAccountModalProps> = ({
     setCurrentView('home');
   };
 
-  const handleLeaveReviewFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setLeaveReviewMediaType('image');
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setLeaveReviewMediaUrl(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
   const handleLeaveReviewSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLeaveReviewErrorMsg(null);
@@ -909,8 +894,6 @@ export const UserAccountModal: React.FC<UserAccountModalProps> = ({
       serviceName: reviewTarget.title,
       comment: leaveReviewComment.trim(),
       rating: leaveReviewRating,
-      mediaUrl: leaveReviewMediaUrl.trim() || undefined,
-      mediaType: 'image',
       active: false,
       status: 'pending',
       userId: currentUser.id,
@@ -937,7 +920,6 @@ export const UserAccountModal: React.FC<UserAccountModalProps> = ({
       setLeaveReviewSuccessMsg(null);
       setShowLeaveReviewModal(false);
       setLeaveReviewComment('');
-      setLeaveReviewMediaUrl('');
       setReviewTarget(null);
     }, 4000);
   };
@@ -997,7 +979,7 @@ export const UserAccountModal: React.FC<UserAccountModalProps> = ({
         <div
           className="px-5 py-4 border-b border-[#E8DEC9] flex items-center justify-between"
           style={{
-            backgroundImage: "url('/assets/aistudio/Inicio_5d3704_dd6e8988.png')",
+            backgroundImage: 'var(--site-window-pattern)',
             backgroundSize: '200px auto',
             backgroundPosition: 'center',
             backgroundRepeat: 'repeat',
@@ -2434,7 +2416,7 @@ export const UserAccountModal: React.FC<UserAccountModalProps> = ({
             <div
               className="px-5 py-4 border-b border-[#E8DEC9] flex items-center justify-between"
               style={{
-                backgroundImage: "url('/assets/aistudio/Inicio_5d3704_dd6e8988.png')",
+                backgroundImage: 'var(--site-window-pattern)',
                 backgroundSize: '200px auto',
                 backgroundPosition: 'center',
                 backgroundRepeat: 'repeat',
@@ -2924,7 +2906,7 @@ export const UserAccountModal: React.FC<UserAccountModalProps> = ({
             <div
               className="relative p-5 sm:p-6 border-b border-[#D4AF37] text-center rounded-t-3xl overflow-hidden shrink-0"
               style={{
-                backgroundImage: "url('/assets/aistudio/Inicio_5d3704_dd6e8988.png')",
+                backgroundImage: 'var(--site-window-pattern)',
                 backgroundSize: '200px auto',
                 backgroundPosition: 'center',
                 backgroundRepeat: 'repeat',
@@ -3001,35 +2983,6 @@ export const UserAccountModal: React.FC<UserAccountModalProps> = ({
                       className="w-full p-3 text-xs bg-[#FDFBF7] border border-[#C5A059]/50 rounded-xl font-['Marcellus'] text-[#5D3704] focus:outline-none focus:border-[#5D3704]"
                       required
                     />
-                  </div>
-
-                  {/* Media File (Photo/Video) */}
-                  <div>
-                    <label className="text-[11px] font-['Cinzel'] font-bold text-[#5D3704] block mb-1">
-                      Adjuntar Foto o GIF Animado del Servicio (Opcional):
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="file"
-                        accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.HEIC,.heif,.HEIF,image/heic,image/heif"
-                        onChange={handleLeaveReviewFileChange}
-                        className="text-xs text-[#5D3704] file:py-1.5 file:px-3 file:rounded-xl file:border file:border-[#C5A059] file:bg-[#FDFBF7] file:text-[#5D3704] file:text-[10px] file:font-['Cinzel'] file:font-bold file:cursor-pointer hover:file:bg-[#F2E5D5]"
-                      />
-                    </div>
-
-                    {leaveReviewMediaUrl && (
-                      <div className="mt-2.5 relative aspect-video rounded-xl bg-black overflow-hidden max-h-40 border border-[#C5A059]">
-                        <img src={leaveReviewMediaUrl} alt="Vista previa" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => setLeaveReviewMediaUrl('')}
-                          className="absolute top-1 right-1 p-1 bg-rose-600 text-white rounded-full text-xs cursor-pointer hover:bg-rose-700"
-                          title="Quitar multimedia"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
                   </div>
 
                   {/* Botón Principal Estilizado: ENVIAR RESEÑA */}

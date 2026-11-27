@@ -1,4 +1,5 @@
 import React from 'react';
+import { SiteImage } from '../context/SiteImagesContext';
 
 interface BeeCoinIconProps {
   className?: string;
@@ -30,14 +31,14 @@ export const BeeCoinIcon: React.FC<BeeCoinIconProps> = ({ className = 'w-5 h-5',
       className={`inline-flex items-center justify-center shrink-0 rounded-full overflow-hidden bg-transparent border-0 shadow-none select-none ${className}`}
       style={containerStyle}
     >
-      <img
-        src="/assets/aistudio/Photoroom_20261028_151229_d08f9cc8.png"
+      <SiteImage
+        imageKey="bee-coin"
         alt="BeeCoin Oficial"
         className="w-full h-full object-cover rounded-full bg-transparent border-0 shadow-none select-none pointer-events-none drop-shadow-xs"
         style={{ ...imgStyle, mixBlendMode: 'normal' }}
         onError={(e) => {
-          e.currentTarget.onerror = null;
-          e.currentTarget.src = '/assets/aistudio/Photoroom_20261027_174035_30f20142.png';
+          const legacy = '/assets/aistudio/Photoroom_20261027_174035_30f20142.png';
+          if (e.currentTarget.getAttribute('src') !== legacy) e.currentTarget.src = legacy;
         }}
       />
     </span>

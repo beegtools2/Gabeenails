@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
 @layer base {
+  :root {
+    --site-window-pattern: url('/assets/aistudio/Inicio_5d3704_dd6e8988.png');
+  }
   body {
     font-family: 'Marcellus', serif;
     color: #5D3704;

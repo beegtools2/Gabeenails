@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { SiteImage } from '../context/SiteImagesContext';
 import { GabeeBeeMark } from './GabeeBeeMark';
 import { ImageLightbox } from './ImageLightbox';
 import {
@@ -183,7 +184,7 @@ export const PressOnModal: React.FC<PressOnModalProps> = ({ isOpen, onClose }) =
   const [itemFormTip, setItemFormTip] = useState<TipType>('almendra');
 
   // Lightbox Zoom Modal
-  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<string | { imageKey: 'coin-guide' | 'tape-guide' } | null>(null);
 
   // ==========================================
   // CATALOG FLOW STATE
@@ -892,7 +893,7 @@ export const PressOnModal: React.FC<PressOnModalProps> = ({ isOpen, onClose }) =
         <div
           className="px-5 py-3.5 border-b border-[#E8DEC9] flex items-center justify-between"
           style={{
-            backgroundImage: "url('/assets/aistudio/Inicio_5d3704_dd6e8988.png')",
+            backgroundImage: 'var(--site-window-pattern)',
             backgroundSize: '220px auto',
             backgroundPosition: 'center',
             backgroundRepeat: 'repeat',
@@ -1649,11 +1650,11 @@ export const PressOnModal: React.FC<PressOnModalProps> = ({ isOpen, onClose }) =
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* Método de la Moneda */}
                       <div
-                        onClick={() => setLightboxImage('/assets/aistudio/M_TODO_DE_LA_MONEDA_fc5fdd97.png')}
+                        onClick={() => setLightboxImage({ imageKey: 'coin-guide' })}
                         className="relative aspect-square sm:aspect-4/3 rounded-2xl overflow-hidden border border-[#DFD1BD] bg-[#FAF7F2] cursor-pointer group shadow-2xs hover:shadow-md transition-all"
                       >
-                        <img
-                          src="/assets/aistudio/M_TODO_DE_LA_MONEDA_fc5fdd97.png"
+                        <SiteImage
+                          imageKey="coin-guide"
                           alt="Método de la Moneda"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
@@ -1666,11 +1667,11 @@ export const PressOnModal: React.FC<PressOnModalProps> = ({ isOpen, onClose }) =
 
                       {/* Método de la Cinta */}
                       <div
-                        onClick={() => setLightboxImage('/assets/aistudio/M_TODO_DE_LA_CINTA_93ee9fef.png')}
+                        onClick={() => setLightboxImage({ imageKey: 'tape-guide' })}
                         className="relative aspect-square sm:aspect-4/3 rounded-2xl overflow-hidden border border-[#DFD1BD] bg-[#FAF7F2] cursor-pointer group shadow-2xs hover:shadow-md transition-all"
                       >
-                        <img
-                          src="/assets/aistudio/M_TODO_DE_LA_CINTA_93ee9fef.png"
+                        <SiteImage
+                          imageKey="tape-guide"
                           alt="Método de la Cinta"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
@@ -2616,7 +2617,7 @@ export const PressOnModal: React.FC<PressOnModalProps> = ({ isOpen, onClose }) =
           <div
             className="px-5 py-3 border-t border-[#E8DEC9] flex items-center justify-between bg-[#F8F3EC]"
             style={{
-              backgroundImage: "url('/assets/aistudio/Inicio_5d3704_dd6e8988.png')",
+              backgroundImage: 'var(--site-window-pattern)',
               backgroundSize: '220px auto',
               backgroundPosition: 'center',
               backgroundRepeat: 'repeat',
@@ -2857,7 +2858,7 @@ export const PressOnModal: React.FC<PressOnModalProps> = ({ isOpen, onClose }) =
             <div
               className="px-5 py-3.5 border-b border-[#E8DEC9] flex items-center justify-between shrink-0"
               style={{
-                backgroundImage: "url('/assets/aistudio/Inicio_5d3704_dd6e8988.png')",
+                backgroundImage: 'var(--site-window-pattern)',
                 backgroundSize: '200px auto',
                 backgroundPosition: 'center',
                 backgroundRepeat: 'repeat',
@@ -2958,11 +2959,19 @@ export const PressOnModal: React.FC<PressOnModalProps> = ({ isOpen, onClose }) =
             >
               <X className="w-5 h-5" />
             </button>
-            <img
-              src={lightboxImage}
-              alt="Vista Ampliada"
-              className="max-w-full max-h-[82vh] object-contain rounded-2xl border-2 border-white/20 shadow-2xl"
-            />
+            {typeof lightboxImage === 'string' ? (
+              <img
+                src={lightboxImage}
+                alt="Vista Ampliada"
+                className="max-w-full max-h-[82vh] object-contain rounded-2xl border-2 border-white/20 shadow-2xl"
+              />
+            ) : (
+              <SiteImage
+                {...lightboxImage}
+                alt="Vista Ampliada"
+                className="max-w-full max-h-[82vh] object-contain rounded-2xl border-2 border-white/20 shadow-2xl"
+              />
+            )}
           </div>
         </div>
       )}
@@ -2976,7 +2985,7 @@ export const PressOnModal: React.FC<PressOnModalProps> = ({ isOpen, onClose }) =
             <div
               className="px-5 py-3.5 border-b border-[#E8DEC9] flex items-center justify-between"
               style={{
-                backgroundImage: "url('/assets/aistudio/Inicio_5d3704_dd6e8988.png')",
+                backgroundImage: 'var(--site-window-pattern)',
                 backgroundSize: '200px auto',
                 backgroundPosition: 'center',
                 backgroundRepeat: 'repeat',

@@ -46,7 +46,7 @@ export const AdditionalsModal: React.FC = () => {
           className="px-6 py-5 border-b border-[#E8DEC9] flex items-center justify-between"
           style={{
             backgroundColor: '#FAF7F2',
-            backgroundImage: "url('/assets/aistudio/Inicio_5d3704_dd6e8988.png')",
+            backgroundImage: 'var(--site-window-pattern)',
             backgroundSize: '200px auto',
             backgroundPosition: 'center',
             backgroundRepeat: 'repeat',
@@ -183,7 +183,7 @@ export const AdditionalsModal: React.FC = () => {
           className="p-4 border-t border-[#E8DEC9] flex flex-col sm:flex-row items-center justify-between gap-3"
           style={{
             backgroundColor: '#FAF7F2',
-            backgroundImage: "url('/assets/aistudio/Inicio_5d3704_dd6e8988.png')",
+            backgroundImage: 'var(--site-window-pattern)',
             backgroundSize: '200px auto',
             backgroundPosition: 'center',
             backgroundRepeat: 'repeat',

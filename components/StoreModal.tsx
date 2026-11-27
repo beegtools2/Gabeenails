@@ -291,7 +291,7 @@ const handleCheckout = (e: React.FormEvent) => {
         className="relative border border-[#5D3704]/20 rounded-3xl max-w-3xl w-full flex flex-col max-h-[85vh] shadow-2xl overflow-hidden"
         style={{
           backgroundColor: '#FAF7F2',
-          backgroundImage: "url('/assets/aistudio/Inicio_5d3704_dd6e8988.png')",
+          backgroundImage: 'var(--site-window-pattern)',
           backgroundSize: '240px auto',
           backgroundRepeat: 'repeat',
         }}
@@ -303,7 +303,7 @@ const handleCheckout = (e: React.FormEvent) => {
           className="relative z-10 flex-shrink-0 p-4 sm:p-5 border-b border-[#5D3704]/20 flex items-center justify-between gap-3 rounded-t-3xl"
           style={{
             backgroundColor: '#FAF7F2',
-            backgroundImage: "url('/assets/aistudio/Inicio_5d3704_dd6e8988.png')",
+            backgroundImage: 'var(--site-window-pattern)',
             backgroundSize: '200px auto',
             backgroundPosition: 'center',
             backgroundRepeat: 'repeat',
@@ -1288,7 +1288,7 @@ const handleCheckout = (e: React.FormEvent) => {
             className="relative border-2 border-[#D4AF37] rounded-3xl max-w-md w-full shadow-[0_20px_60px_rgba(93,55,4,0.45),0_0_30px_rgba(212,175,55,0.35)] overflow-hidden text-center p-6 sm:p-7 space-y-4"
             style={{
               backgroundColor: '#FAF7F2',
-              backgroundImage: "url('/assets/aistudio/Inicio_5d3704_dd6e8988.png')",
+              backgroundImage: 'var(--site-window-pattern)',
               backgroundSize: '220px auto',
               backgroundRepeat: 'repeat',
             }}
