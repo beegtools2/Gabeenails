@@ -38,6 +38,16 @@ import {
 import { ADDITIONALS_DATA, AdditionalItem } from '../data/additionalsData';
 import { safeSetLocalStorage, safeGetLocalStorage } from '../utils/storageUtils';
 import {
+  isSupabaseStateConfigured,
+  loadSiteStateFromSupabase,
+  saveSiteStateToSupabase,
+} from '../services/supabaseStateService';
+
+function syncAppStateToSupabase(key: string, value: unknown): void {
+  if (!isSupabaseStateConfigured()) return;
+  void saveSiteStateToSupabase(`app_state:${key}`, value);
+} 
+import {
   SEED_REVIEW_IDS,
   markReviewsAsDeleted,
   unmarkReviewsAsDeleted,
@@ -1058,6 +1068,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           };
           setSettings(merged);
           safeSetLocalStorage(SETTINGS_STORAGE_KEY, JSON.stringify(merged));
+          syncAppStateToSupabase(SETTINGS_STORAGE_KEY, merged);
         }
       })
     );
