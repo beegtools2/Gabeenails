@@ -1045,6 +1045,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (designs && designs.length > 0) {
           setPromoDesigns(designs);
           safeSetLocalStorage(PROMOS_STORAGE_KEY, JSON.stringify(designs));
+          syncAppStateToSupabase(PROMOS_STORAGE_KEY, designs);
         }
       })
     );
@@ -1695,6 +1696,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPromoDesigns((prev) => {
       const updated = [...prev, newDesign];
       safeSetLocalStorage(PROMOS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(PROMOS_STORAGE_KEY, updated);
       return updated;
     });
     savePromoDesignToFirestore(newDesign);
