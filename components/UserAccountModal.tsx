@@ -2408,9 +2408,10 @@ export const UserAccountModal: React.FC<UserAccountModalProps> = ({
                 </div>
               </div>
             </form>
-          )}
-        </div>
-      </div>
+         </div>
+   </form>
+ </div>
+</div>
 
       {/* ============================================================== */}
       {/* MODAL PASARELA MANUAL DE RECARGA DE BEECOINS                  */}
