@@ -2405,12 +2405,12 @@ export const UserAccountModal: React.FC<UserAccountModalProps> = ({
                   >
                   Ingresar aquí
                   </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+               </div>
+      </div>
+    </form>
+  </div>
+</div>
+) : null}
 
       {/* ============================================================== */}
       {/* MODAL PASARELA MANUAL DE RECARGA DE BEECOINS                  */}
