@@ -33,7 +33,7 @@ export const SITE_IMAGE_GROUPS = [
     images: [
       { key: 'coin-guide', label: 'Método de la moneda', fallback: `${ASSETS}M_TODO_DE_LA_MONEDA_fc5fdd97.png` },
       { key: 'tape-guide', label: 'Método de la cinta', fallback: `${ASSETS}M_TODO_DE_LA_CINTA_93ee9fef.png` },
-      { key: 'window-pattern', label: 'Patrón de abejitas', fallback: `${ASSETS}Inicio_5d3704_dd6e8988.png` },
+      { key: 'window-pattern', label: 'Logo y patrón de abejita', fallback: `${ASSETS}Logo_Abejita_Sin_Circulo_Gold.png` },
     ],
   },
 ] as const;
