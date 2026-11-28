@@ -7,80 +7,103 @@ import {
   type SiteImageKey,
   type SiteImageVersions,
 } from '../data/siteImages';
+import {
+  loadSiteStateFromSupabase,
+  saveSiteStateToSupabase,
+} from '../services/supabaseStateService';
+
+const SUPABASE_IMAGE_VERSIONS_ID = 'site_image_versions';
 
 interface SiteImagesState {
   versions: SiteImageVersions;
   setVersion: (key: SiteImageKey, version: string | null) => void;
 }
 
-const SiteImagesContext = createContext<SiteImagesState>({ versions: {}, setVersion: () => {} });
+const SiteImagesContext = createContext<SiteImagesState>({
+  versions: {},
+  setVersion: () => {},
+});
 
-export function SiteImagesProvider({ children }: React.PropsWithChildren) {
+function sanitizeVersions(input: unknown): SiteImageVersions {
+  if (!input || typeof input !== 'object') return {};
+  const next: SiteImageVersions = {};
+  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    if (isSiteImageKey(key) && typeof value === 'string' && value.trim()) {
+      next[key] = value.trim();
+    }
+  }
+  return next;
+}
+
+export function SiteImagesProvider({ children }: { children: React.ReactNode }) {
   const [versions, setVersions] = useState<SiteImageVersions>({});
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(SITE_IMAGES_ENDPOINT, { signal: controller.signal })
-      .then((response) => response.ok ? response.json() : null)
-      .then((manifest: unknown) => {
-        if (!manifest || typeof manifest !== 'object' || controller.signal.aborted) return;
-        const loaded: SiteImageVersions = {};
-        for (const [key, version] of Object.entries(manifest)) {
-          if (isSiteImageKey(key) && typeof version === 'string' && version) loaded[key] = version;
+    let active = true;
+
+    loadSiteStateFromSupabase<SiteImageVersions>(SUPABASE_IMAGE_VERSIONS_ID)
+      .then((remoteVersions) => {
+        if (!active || controller.signal.aborted) return;
+        const sanitized = sanitizeVersions(remoteVersions);
+        if (Object.keys(sanitized).length > 0) {
+          setVersions((prev) => ({ ...prev, ...sanitized }));
         }
-        setVersions((current) => ({ ...loaded, ...current }));
       })
       .catch(() => {});
-    return () => controller.abort();
+
+    fetch(SITE_IMAGES_ENDPOINT, { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((manifest: unknown) => {
+        if (!active || controller.signal.aborted) return;
+        if (!manifest || typeof manifest !== 'object') return;
+        const sanitized = sanitizeVersions(manifest);
+        if (Object.keys(sanitized).length > 0) {
+          setVersions((prev) => ({ ...sanitized, ...prev }));
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, []);
 
-  const patternVersion = versions['window-pattern'];
-  useEffect(() => {
-    if (!patternVersion) return;
-    const property = '--site-window-pattern';
-    const source = siteImageEndpoint('window-pattern', patternVersion);
-    const image = new Image();
-    image.onload = () => document.documentElement.style.setProperty(property, `url("${source}")`);
-    image.src = source;
-    return () => {
-      image.onload = null;
-      document.documentElement.style.removeProperty(property);
-    };
-  }, [patternVersion]);
+  const setVersion = (key: SiteImageKey, version: string | null) => {
+    setVersions((prev) => {
+      const next: SiteImageVersions = { ...prev };
+      if (version && version.trim()) {
+        next[key] = version.trim();
+      } else {
+        delete next[key];
+      }
+      void saveSiteStateToSupabase<SiteImageVersions>(
+        SUPABASE_IMAGE_VERSIONS_ID,
+        next
+      );
+      return next;
+    });
+  };
 
-  function setVersion(key: SiteImageKey, version: string | null) {
-    setVersions((current) => ({ ...current, [key]: version ?? undefined }));
-  }
-
-  return <SiteImagesContext.Provider value={{ versions, setVersion }}>{children}</SiteImagesContext.Provider>;
+  return (
+    <SiteImagesContext.Provider value={{ versions, setVersion }}>
+      {children}
+    </SiteImagesContext.Provider>
+  );
 }
 
 export function useSiteImages() {
   return useContext(SiteImagesContext);
 }
 
-type SiteImageProps = Omit<React.ImgHTMLAttributes<HTMLImageElement>, 'src' | 'slot'> & {
-  imageKey: SiteImageKey;
-};
-
-export function SiteImage({ imageKey, onError, ...props }: SiteImageProps) {
-  const { versions } = useSiteImages();
-  const version = versions[imageKey];
-  const fallback = defaultSiteImage(imageKey);
-  const source = version ? siteImageEndpoint(imageKey, version) : fallback;
-
-  return (
-    <img
-      {...props}
-      src={source}
-      onError={(event) => {
-        const image = event.currentTarget;
-        if (source !== fallback && image.getAttribute('src') === source) {
-          image.src = fallback;
-        } else {
-          onError?.(event);
-        }
-      }}
-    />
-  );
+export function getSiteImageSrc(
+  key: SiteImageKey,
+  versions?: SiteImageVersions
+): string {
+  const version = versions?.[key];
+  if (version) {
+    return siteImageEndpoint(key, version);
+  }
+  return defaultSiteImage(key);
 }
