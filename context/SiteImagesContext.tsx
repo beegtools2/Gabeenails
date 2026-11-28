@@ -2,8 +2,6 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
   defaultSiteImage,
   isSiteImageKey,
-  SITE_IMAGES_ENDPOINT,
-  siteImageEndpoint,
   type SiteImageKey,
   type SiteImageVersions,
 } from '../data/siteImages';
@@ -41,12 +39,11 @@ export function SiteImagesProvider({ children }: { children: React.ReactNode }) 
   const [versions, setVersions] = useState<SiteImageVersions>({});
 
   useEffect(() => {
-    const controller = new AbortController();
     let active = true;
 
     loadSiteStateFromSupabase<SiteImageVersions>(SUPABASE_IMAGE_VERSIONS_ID)
       .then((remoteVersions) => {
-        if (!active || controller.signal.aborted) return;
+        if (!active) return;
         const sanitized = sanitizeVersions(remoteVersions);
         if (Object.keys(sanitized).length > 0) {
           setVersions((prev) => ({ ...prev, ...sanitized }));
@@ -54,21 +51,8 @@ export function SiteImagesProvider({ children }: { children: React.ReactNode }) 
       })
       .catch(() => {});
 
-    fetch(SITE_IMAGES_ENDPOINT, { signal: controller.signal })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((manifest: unknown) => {
-        if (!active || controller.signal.aborted) return;
-        if (!manifest || typeof manifest !== 'object') return;
-        const sanitized = sanitizeVersions(manifest);
-        if (Object.keys(sanitized).length > 0) {
-          setVersions((prev) => ({ ...sanitized, ...prev }));
-        }
-      })
-      .catch(() => {});
-
     return () => {
       active = false;
-      controller.abort();
     };
   }, []);
 
@@ -103,9 +87,12 @@ export function getSiteImageSrc(
   key: SiteImageKey,
   versions?: SiteImageVersions
 ): string {
+  const baseSrc = defaultSiteImage(key);
   const version = versions?.[key];
   if (version) {
-    return siteImageEndpoint(key, version);
+    const encodedPath = encodeURI(baseSrc);
+    const separator = encodedPath.includes('?') ? '&' : '?';
+    return `${encodedPath}${separator}v=${encodeURIComponent(version)}`;
   }
-  return defaultSiteImage(key);
+  return encodeURI(baseSrc);
 }
