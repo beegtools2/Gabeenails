@@ -22,8 +22,6 @@ import {
   INITIAL_SETTINGS,
   PROMO_CATALOG_DESIGNS,
   INITIAL_SAMPLE_APPOINTMENTS,
-  getSystemPrices,
-  getServicePrices,
   NAIL_SHAPES,
   NAIL_LENGTHS,
   INITIAL_PRESS_ON_ITEMS,
@@ -46,7 +44,8 @@ import {
 function syncAppStateToSupabase(key: string, value: unknown): void {
   if (!isSupabaseStateConfigured()) return;
   void saveSiteStateToSupabase(`app_state:${key}`, value);
-} 
+}
+
 import {
   SEED_REVIEW_IDS,
   markReviewsAsDeleted,
@@ -57,49 +56,13 @@ import {
   DEFAULT_ADMIN_PASSWORD,
   persistAdminPassword,
 } from '../utils/adminPasswordUtils';
+import { getStoredSpreadsheetId } from '../services/googleSheetsService';
 import {
-  googleSignIn,
-  googleLogout,
-  initAuth,
-  getAccessToken,
-} from '../services/googleAuth';
-import {
-  createGabeeSpreadsheet,
-  appendAppointmentToSheet,
-  syncAppointmentsSheet,
-  syncSettingsSheet,
-  syncCatalogPhotosSheet,
-  syncAllDataToSpreadsheet,
-  getStoredSpreadsheetId,
-  storeSpreadsheetId,
-} from '../services/googleSheetsService';
-import {
-  testFirestoreConnection,
   subscribeToAppointments,
   saveAppointmentToFirestore,
   deleteAppointmentFromFirestore,
   subscribeToPromoDesigns,
-  savePromoDesignToFirestore,
-  deletePromoDesignFromFirestore,
-  batchSaveInitialDesigns,
   subscribeToSettings,
-  saveSettingsToFirestore,
-  subscribeToInventoryItems,
-  saveInventoryItemToFirestore,
-  deleteInventoryItemFromFirestore,
-  batchSaveInitialInventory,
-  subscribeToServicesCatalog,
-  saveServiceItemToFirestore,
-  deleteServiceItemFromFirestore,
-  batchSaveInitialServices,
-  subscribeToPressOnCatalog,
-  savePressOnItemToFirestore,
-  deletePressOnItemFromFirestore,
-  batchSaveInitialPressOn,
-  subscribeToAdditionals,
-  saveAdditionalItemToFirestore,
-  deleteAdditionalItemFromFirestore,
-  batchSaveInitialAdditionals,
   subscribeToStoreOrders,
   saveStoreOrderToFirestore,
   deleteStoreOrderFromFirestore,
@@ -108,11 +71,6 @@ import {
   deleteUserFromFirestore,
   subscribeToRecharges,
   saveRechargeToFirestore,
-  deleteRechargeFromFirestore,
-  subscribeToCourses,
-  saveCourseItemToFirestore,
-  deleteCourseItemFromFirestore,
-  batchSaveInitialCourses,
   subscribeToReviews,
   saveReviewItemToFirestore,
   deleteReviewItemFromFirestore,
@@ -148,7 +106,12 @@ interface AppContextType {
   pressOnInitialStep: number;
   selectedPressOnPromoItem: PressOnItem | PromoDesign | null;
   setSelectedPressOnPromoItem: (item: PressOnItem | PromoDesign | null) => void;
-  openPressOnModal: (tab?: 'catalog' | 'custom', initialSetIdx?: number, initialStep?: number, promoItem?: PressOnItem | PromoDesign | null) => void;
+  openPressOnModal: (
+    tab?: 'catalog' | 'custom',
+    initialSetIdx?: number,
+    initialStep?: number,
+    promoItem?: PressOnItem | PromoDesign | null
+  ) => void;
 
   isPromoPressOnModalOpen: boolean;
   setIsPromoPressOnModalOpen: (open: boolean) => void;
@@ -230,7 +193,7 @@ interface AppContextType {
     appointmentData: Omit<Appointment, 'id' | 'code' | 'createdAt'>,
     options?: { notifyTelegram?: boolean }
   ) => Appointment;
-  updateAppointment: (id: string, updates: Partial<Appointment>) => void;
+  updateAppointment: (id: string, updates: Partial<Appointment>) => Appointment | undefined;
   updateAppointmentStatus: (id: string, status: Appointment['status'], depositPaid?: boolean) => void;
   deleteAppointment: (id: string) => void;
   clearCancelledAppointments: () => void;
@@ -264,13 +227,18 @@ interface AppContextType {
   openAccountModal: (tab?: 'profile' | 'history' | 'wallet', initialMode?: 'login' | 'register') => void;
   isRouletteModalOpen: boolean;
   setIsRouletteModalOpen: (open: boolean) => void;
-  registerUser: (data: Omit<UserProfile, 'id' | 'beeCoins' | 'isVip' | 'visitsCount' | 'stampsCount' | 'consecutivePromoMonths' | 'promoPauseHistory' | 'rouletteSpun' | 'createdAt'>) => UserProfile;
+  registerUser: (
+    data: Omit<
+      UserProfile,
+      'id' | 'beeCoins' | 'isVip' | 'visitsCount' | 'stampsCount' | 'consecutivePromoMonths' | 'promoPauseHistory' | 'rouletteSpun' | 'createdAt'
+    >
+  ) => UserProfile;
   loginUser: (phoneOrEmail: string, pass?: string) => UserProfile | null;
   logoutUser: () => void;
   updateUserProfile: (updatedUser: UserProfile) => void;
   deleteUserAccount: (userId: string) => void;
   updateUserCoinsAndVisits: (userId: string, newCoins: number, newVisits: number) => void;
-  purchaseBeeCoins: (coinsAmount: number, priceSoles: number) => void;
+  purchaseBeeCoins: (coinsAmount: number, priceSoles?: number) => void;
   spinRoulette: (prizeName: string) => { prize: string; token: string };
 
   rechargeRequests: BeeCoinRechargeRequest[];
@@ -283,7 +251,10 @@ interface AppContextType {
   setIsStoreModalOpen: (open: boolean) => void;
   storeOrders: StoreOrder[];
   createStoreOrder: (data: Omit<StoreOrder, 'id' | 'code' | 'createdAt' | 'status'>) => StoreOrder;
-  updateStoreOrderStatus: (orderId: string, status: 'pending' | 'confirmed' | 'cancelled' | 'delivered' | 'completed' | 'packing' | 'shipped') => void;
+  updateStoreOrderStatus: (
+    orderId: string,
+    status: 'pending' | 'confirmed' | 'cancelled' | 'delivered' | 'completed' | 'packing' | 'shipped'
+  ) => void;
   updateStoreOrder: (orderId: string, updates: Partial<StoreOrder>) => void;
   deleteStoreOrder: (orderId: string) => void;
 
@@ -317,6 +288,8 @@ const CATBEE_CONFIG_STORAGE_KEY = 'gabee_catbee_config_v1';
 const CATBEE_KNOWLEDGE_STORAGE_KEY = 'gabee_catbee_knowledge_v1';
 const STORE_ORDERS_STORAGE_KEY = 'gabee_nail_studio_store_orders_v1';
 const TELEGRAM_APPLIED_ACTIONS_KEY = 'gabee_telegram_applied_actions_v1';
+const RECHARGES_STORAGE_KEY = 'gabee_beecoin_recharges_v1';
+
 const INITIAL_SAMPLE_STORE_ORDERS: StoreOrder[] = [
   {
     id: 'ord-sample-5245',
@@ -353,6 +326,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const deletedIds = safeGetLocalStorage<string[]>(DELETED_USER_IDS_STORAGE_KEY, []);
     return raw.filter((u) => !deletedIds.includes(u.id));
   });
+
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     const active = safeGetLocalStorage<UserProfile | null>(USER_ACCOUNT_STORAGE_KEY, null);
     if (!active) return null;
@@ -364,12 +338,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     return active;
   });
+
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [accountModalTab, setAccountModalTab] = useState<'profile' | 'history' | 'wallet'>('profile');
   const [accountModalMode, setAccountModalMode] = useState<'login' | 'register'>('login');
   const [isRouletteModalOpen, setIsRouletteModalOpen] = useState(false);
 
-  const openAccountModal = (tab: 'profile' | 'history' | 'wallet' = 'profile', initialMode?: 'login' | 'register') => {
+  const openAccountModal = (
+    tab: 'profile' | 'history' | 'wallet' = 'profile',
+    initialMode?: 'login' | 'register'
+  ) => {
     setAccountModalTab(tab);
     if (initialMode) {
       setAccountModalMode(initialMode);
@@ -377,7 +355,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsAccountModalOpen(true);
   };
 
-  const registerUser = (data: Omit<UserProfile, 'id' | 'beeCoins' | 'isVip' | 'visitsCount' | 'stampsCount' | 'consecutivePromoMonths' | 'promoPauseHistory' | 'rouletteSpun' | 'createdAt'>): UserProfile => {
+  const registerUser = (
+    data: Omit<
+      UserProfile,
+      'id' | 'beeCoins' | 'isVip' | 'visitsCount' | 'stampsCount' | 'consecutivePromoMonths' | 'promoPauseHistory' | 'rouletteSpun' | 'createdAt'
+    >
+  ): UserProfile => {
     const newUser: UserProfile = {
       ...data,
       id: `usr-${Date.now()}`,
@@ -394,6 +377,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAllUsers((prev) => {
       const updated = [...prev.filter((u) => u.id !== newUser.id), newUser];
       safeSetLocalStorage(ALL_USERS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(ALL_USERS_STORAGE_KEY, updated);
       return updated;
     });
 
@@ -438,47 +422,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isVip: visits >= 4,
     };
 
-    // Always update active currentUser state & localStorage
     setCurrentUser(synchronizedUser);
     safeSetLocalStorage(USER_ACCOUNT_STORAGE_KEY, JSON.stringify(synchronizedUser));
 
-    // Always update allUsers list & localStorage
     setAllUsers((prev) => {
       const exists = prev.some((u) => u.id === synchronizedUser.id);
       const updated = exists
         ? prev.map((u) => (u.id === synchronizedUser.id ? synchronizedUser : u))
         : [...prev, synchronizedUser];
       safeSetLocalStorage(ALL_USERS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(ALL_USERS_STORAGE_KEY, updated);
       return updated;
     });
 
-    // Save to Firestore
     saveUserToFirestore(synchronizedUser);
   };
 
   const deleteUserAccount = (userId: string) => {
-    // 1. Limpieza de Sesión activa del navegador si corresponde
     if (!userId || !currentUser || currentUser.id === userId) {
       setCurrentUser(null);
       localStorage.removeItem(USER_ACCOUNT_STORAGE_KEY);
       sessionStorage.removeItem(USER_ACCOUNT_STORAGE_KEY);
     }
 
-    // 2. Registro persistente de ID eliminado para evitar reaparición desde snapshots
     const deletedIds = safeGetLocalStorage<string[]>(DELETED_USER_IDS_STORAGE_KEY, []);
     if (userId && !deletedIds.includes(userId)) {
       deletedIds.push(userId);
       safeSetLocalStorage(DELETED_USER_IDS_STORAGE_KEY, JSON.stringify(deletedIds));
     }
 
-    // 3. Eliminación real y actualización dinámica del estado global en React y localStorage
     setAllUsers((prev) => {
       const updated = prev.filter((u) => u.id !== userId);
       safeSetLocalStorage(ALL_USERS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(ALL_USERS_STORAGE_KEY, updated);
       return updated;
     });
 
-    // 4. Eliminación física permanente en Firestore
     if (userId) {
       deleteUserFromFirestore(userId).catch(() => {});
     }
@@ -497,7 +476,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             beeCoins: Math.max(0, newCoins),
             visitsCount: Math.max(0, newVisits),
             stampsCount: Math.max(0, stampsCount),
-            isVip: isVip,
+            isVip,
           };
           modifiedUser = mod;
           if (currentUser && currentUser.id === userId) {
@@ -509,8 +488,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return u;
       });
       safeSetLocalStorage(ALL_USERS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(ALL_USERS_STORAGE_KEY, updated);
       return updated;
     });
+
     if (modifiedUser) {
       saveUserToFirestore(modifiedUser);
     }
@@ -528,8 +509,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAllUsers((prev) => {
       const updated = prev.map((u) => (u.id === updatedUser.id ? updatedUser : u));
       safeSetLocalStorage(ALL_USERS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(ALL_USERS_STORAGE_KEY, updated);
       return updated;
     });
+
     saveUserToFirestore(updatedUser);
   };
 
@@ -548,26 +531,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAllUsers((prev) => {
       const updated = prev.map((u) => (u.id === updatedUser.id ? updatedUser : u));
       safeSetLocalStorage(ALL_USERS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(ALL_USERS_STORAGE_KEY, updated);
       return updated;
     });
-    saveUserToFirestore(updatedUser);
 
+    saveUserToFirestore(updatedUser);
     return { prize: prizeName, token };
   };
-
-  const RECHARGES_STORAGE_KEY = 'gabee_beecoin_recharges_v1';
-  const USED_OPERATION_CODES_KEY = 'gabee_used_operation_codes_v1';
 
   const [rechargeRequests, setRechargeRequests] = useState<BeeCoinRechargeRequest[]>(() => {
     return safeGetLocalStorage<BeeCoinRechargeRequest[]>(RECHARGES_STORAGE_KEY, []);
   });
 
-  const recordOperationCode = (code: string, source: 'recharge' | 'store_order' | 'appointment' = 'recharge', userId?: string) => {
-    // No-op: se eliminó la restricción de duplicados por tiempo/caducidad.
-    void code; void source; void userId;
+  const recordOperationCode = (
+    code: string,
+    source: 'recharge' | 'store_order' | 'appointment' = 'recharge',
+    userId?: string
+  ) => {
+    void code;
+    void source;
+    void userId;
   };
 
-  const requestBeeCoinRecharge = (data: Omit<BeeCoinRechargeRequest, 'id' | 'status' | 'createdAt'>): BeeCoinRechargeRequest => {
+  const requestBeeCoinRecharge = (
+    data: Omit<BeeCoinRechargeRequest, 'id' | 'status' | 'createdAt'>
+  ): BeeCoinRechargeRequest => {
     const newReq: BeeCoinRechargeRequest = {
       ...data,
       id: `rchg-${Date.now()}`,
@@ -578,6 +566,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setRechargeRequests((prev) => {
       const updated = [newReq, ...prev];
       safeSetLocalStorage(RECHARGES_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(RECHARGES_STORAGE_KEY, updated);
       return updated;
     });
     saveRechargeToFirestore(newReq);
@@ -592,7 +581,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       setAllUsers((prevUsers) => {
         const updatedUsers = prevUsers.map((u) => {
-          const isTargetUser = u.id === target.userId || (u.phone && target.userPhone && u.phone === target.userPhone);
+          const isTargetUser =
+            u.id === target.userId || (u.phone && target.userPhone && u.phone === target.userPhone);
           if (isTargetUser) {
             const updatedUser = { ...u, beeCoins: (u.beeCoins || 0) + target.coinsAmount };
             if (currentUser && (currentUser.id === u.id || currentUser.phone === u.phone)) {
@@ -605,6 +595,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return u;
         });
         safeSetLocalStorage(ALL_USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+        syncAppStateToSupabase(ALL_USERS_STORAGE_KEY, updatedUsers);
         return updatedUsers;
       });
 
@@ -617,6 +608,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return r;
       });
       safeSetLocalStorage(RECHARGES_STORAGE_KEY, JSON.stringify(updatedRequests));
+      syncAppStateToSupabase(RECHARGES_STORAGE_KEY, updatedRequests);
       return updatedRequests;
     });
   };
@@ -632,6 +624,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return r;
       });
       safeSetLocalStorage(RECHARGES_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(RECHARGES_STORAGE_KEY, updated);
       return updated;
     });
   };
@@ -658,7 +651,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return INITIAL_SAMPLE_STORE_ORDERS;
   });
 
-  // Clean up legacy bloated storage keys to keep localStorage clean
   useEffect(() => {
     try {
       const legacyKeysToRemove = [
@@ -674,8 +666,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  const createStoreOrder = (data: Omit<StoreOrder, 'id' | 'code' | 'createdAt' | 'status'>): StoreOrder => {
-    // Dynamic Year Prefix: "TG26_" in 2026, "TG27_" in 2027, etc.
+  const createStoreOrder = (
+    data: Omit<StoreOrder, 'id' | 'code' | 'createdAt' | 'status'>
+  ): StoreOrder => {
     const yearShort = new Date().getFullYear().toString().slice(-2);
     let randomSuffix = Math.floor(1000 + Math.random() * 9000).toString();
     let generatedCode = `TG${yearShort}_${randomSuffix}`;
@@ -699,18 +692,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recordOperationCode(data.operationNumber, 'store_order', data.userId);
     }
 
-    // Functional accumulation in pure React global memory & safe localStorage persistence
     setStoreOrders((prevOrders) => {
       const filtered = prevOrders.filter((o) => o.id !== newOrder.id);
       const updated = [newOrder, ...filtered];
       safeSetLocalStorage(STORE_ORDERS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(STORE_ORDERS_STORAGE_KEY, updated);
       return updated;
     });
 
     try {
       saveStoreOrderToFirestore(newOrder).catch(() => {});
     } catch {
-      // Ignored: Handled gracefully in saveStoreOrderToFirestore
+      // Ignored
     }
     void notifyTelegramStoreOrder(newOrder);
 
@@ -722,6 +715,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setAllUsers((prevUsers) => {
         const updated = prevUsers.map((u) => (u.id === updatedUser.id ? updatedUser : u));
         safeSetLocalStorage(ALL_USERS_STORAGE_KEY, JSON.stringify(updated));
+        syncAppStateToSupabase(ALL_USERS_STORAGE_KEY, updated);
         return updated;
       });
       saveUserToFirestore(updatedUser);
@@ -731,23 +725,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const updated = prev.map((item) => {
         const orderedItem = data.items.find((it) => it.productId === item.id);
         if (orderedItem) {
-          const mod = {
+          return {
             ...item,
             stock: Math.max(0, (item.stock || 0) - orderedItem.quantity),
           };
-          saveInventoryItemToFirestore(mod);
-          return mod;
         }
         return item;
       });
       safeSetLocalStorage(GABEE_STUDIO_INVENTORY_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(GABEE_STUDIO_INVENTORY_KEY, updated);
       return updated;
     });
 
     return newOrder;
   };
 
-  const updateStoreOrderStatus = (orderId: string, status: 'pending' | 'confirmed' | 'cancelled' | 'delivered' | 'completed' | 'packing' | 'shipped') => {
+  const updateStoreOrderStatus = (
+    orderId: string,
+    status: 'pending' | 'confirmed' | 'cancelled' | 'delivered' | 'completed' | 'packing' | 'shipped'
+  ) => {
     let updatedOrder: StoreOrder | undefined;
     setStoreOrders((prev) => {
       const updated = prev.map((ord) => {
@@ -758,6 +754,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return ord;
       });
       safeSetLocalStorage(STORE_ORDERS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(STORE_ORDERS_STORAGE_KEY, updated);
       return updated;
     });
     if (updatedOrder) {
@@ -776,6 +773,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return ord;
       });
       safeSetLocalStorage(STORE_ORDERS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(STORE_ORDERS_STORAGE_KEY, updated);
       return updated;
     });
     if (updatedOrder) {
@@ -787,13 +785,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setStoreOrders((prev) => {
       const updated = prev.filter((ord) => ord.id !== orderId);
       safeSetLocalStorage(STORE_ORDERS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(STORE_ORDERS_STORAGE_KEY, updated);
       return updated;
     });
     deleteStoreOrderFromFirestore(orderId).catch(() => {});
   };
-
-
-
 
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [flipbookType, setFlipbookType] = useState<'terms' | 'benefits' | null>(null);
@@ -847,13 +843,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [isFirestoreConnected, setIsFirestoreConnected] = useState(false);
 
-  const [googleUser, setGoogleUser] = useState<any | null>(null);
-  const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
-  const [spreadsheetId, setSpreadsheetId] = useState<string | null>(() => getStoredSpreadsheetId());
-  const [spreadsheetUrl, setSpreadsheetUrl] = useState<string | null>(() =>
+  const [googleUser] = useState<any | null>(null);
+  const [googleAccessToken] = useState<string | null>(null);
+  const [spreadsheetId] = useState<string | null>(() => getStoredSpreadsheetId());
+  const [spreadsheetUrl] = useState<string | null>(() =>
     localStorage.getItem(SPREADSHEET_URL_STORAGE_KEY)
   );
-  const [isSyncingSheets, setIsSyncingSheets] = useState(false);
+  const [isSyncingSheets] = useState(false);
 
   const [settings, setSettings] = useState<StudioSettings>(() => {
     try {
@@ -877,8 +873,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
-    } catch {
-    }
+    } catch {}
     return PROMO_CATALOG_DESIGNS;
   });
 
@@ -929,42 +924,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAdditionalsList((prev) => {
       const updated = [...prev, newItem];
       safeSetLocalStorage(ADDITIONALS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(ADDITIONALS_STORAGE_KEY, updated);
       return updated;
     });
-    saveAdditionalItemToFirestore(newItem);
   };
 
   const updateAdditionalItem = (id: string, updates: Partial<AdditionalItem>) => {
-    let updatedItem: AdditionalItem | undefined;
     setAdditionalsList((prev) => {
-      const updated = prev.map((item) => {
-        if (item.id === id) {
-          updatedItem = { ...item, ...updates };
-          return updatedItem;
-        }
-        return item;
-      });
+      const updated = prev.map((item) => (item.id === id ? { ...item, ...updates } : item));
       safeSetLocalStorage(ADDITIONALS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(ADDITIONALS_STORAGE_KEY, updated);
       return updated;
     });
-    if (updatedItem) {
-      saveAdditionalItemToFirestore(updatedItem);
-    }
   };
 
   const deleteAdditionalItem = (id: string) => {
     setAdditionalsList((prev) => {
       const updated = prev.filter((item) => item.id !== id);
       safeSetLocalStorage(ADDITIONALS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(ADDITIONALS_STORAGE_KEY, updated);
       return updated;
     });
-    deleteAdditionalItemFromFirestore(id);
   };
 
   const resetAdditionalsList = () => {
     setAdditionalsList(ADDITIONALS_DATA);
     safeSetLocalStorage(ADDITIONALS_STORAGE_KEY, JSON.stringify(ADDITIONALS_DATA));
-    batchSaveInitialAdditionals(ADDITIONALS_DATA);
+    syncAppStateToSupabase(ADDITIONALS_STORAGE_KEY, ADDITIONALS_DATA);
   };
 
   const additionalsTotal = useMemo(() => {
@@ -984,7 +970,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSelectedAdditionals([]);
   };
 
-  // INVENTARIO AUTÓNOMO: ESTRUCTURA Y PERSISTENCIA PERENNE EN FIRESTORE + LOCALSTORAGE ('gabee_studio_inventory')
   const [inventoryList, setInventoryList] = useState<InventoryItem[]>(() => {
     try {
       const saved = localStorage.getItem(GABEE_STUDIO_INVENTORY_KEY);
@@ -992,60 +977,120 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
-    } catch {
-    }
+    } catch {}
     return INITIAL_INVENTORY_DATA;
   });
 
+  const [coursesList, setCoursesList] = useState<CourseItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(COURSES_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_COURSES_DATA;
+  });
+
+  const [pressOnCatalog, setPressOnCatalog] = useState<PressOnItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(PRESS_ON_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_PRESS_ON_ITEMS;
+  });
+
+  const [servicesCatalog, setServicesCatalog] = useState<ServiceItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(SERVICES_CATALOG_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_SERVICES_CATALOG;
+  });
+
+  const [reviewsList, setReviewsList] = useState<ReviewItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(REVIEWS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const sanitized = sanitizeReviews<ReviewItem>(parsed as ReviewItem[]);
+          safeSetLocalStorage(REVIEWS_STORAGE_KEY, JSON.stringify(sanitized));
+          return sanitized;
+        }
+      }
+    } catch {}
+    return [];
+  });
+
+  const [reviewedTargetIds, setReviewedTargetIds] = useState<string[]>(() => {
+    return safeGetLocalStorage<string[]>(REVIEWED_TARGETS_STORAGE_KEY, []);
+  });
+
+  const [catbeeConfig, setCatbeeConfig] = useState<CatbeeConfig>(() => {
+    try {
+      const saved = localStorage.getItem(CATBEE_CONFIG_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed.systemPrompt === 'string') {
+          return { ...DEFAULT_CATBEE_CONFIG, ...parsed };
+        }
+      }
+    } catch {}
+    return DEFAULT_CATBEE_CONFIG;
+  });
+
+  const [catbeeKnowledge, setCatbeeKnowledge] = useState<CatbeeKnowledgeItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(CATBEE_KNOWLEDGE_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_CATBEE_KNOWLEDGE;
+  });
+
+  // Carga inicial completa desde Supabase (`public.site_state`) + suscripciones activas
   useEffect(() => {
-    testFirestoreConnection().then((connected) => {
-      setIsFirestoreConnected(connected);
-    });
+    setIsFirestoreConnected(isSupabaseStateConfigured());
 
     const unsubs: (() => void)[] = [];
 
-    unsubs.push(
-      subscribeToInventoryItems((items) => {
-        if (items && items.length > 0) {
-          setInventoryList(items);
-          safeSetLocalStorage(GABEE_STUDIO_INVENTORY_KEY, JSON.stringify(items));
-        }
-      })
-    );
-
-    unsubs.push(
-      subscribeToServicesCatalog((services) => {
-        if (services && services.length > 0) {
-          setServicesCatalog(services);
-          safeSetLocalStorage(SERVICES_CATALOG_STORAGE_KEY, JSON.stringify(services));
-        }
-      })
-    );
-
-    unsubs.push(
-      subscribeToPressOnCatalog((items) => {
-        if (items && items.length > 0) {
-          setPressOnCatalog(items);
-          safeSetLocalStorage(PRESS_ON_STORAGE_KEY, JSON.stringify(items));
-        }
-      })
-    );
-
-    unsubs.push(
-      subscribeToAdditionals((items) => {
-        if (items && items.length > 0) {
-          setAdditionalsList(items);
-          safeSetLocalStorage(ADDITIONALS_STORAGE_KEY, JSON.stringify(items));
-        }
-      })
-    );
-
     void (async () => {
       try {
-        const [remoteSettings, remotePromos] = await Promise.all([
+        const [
+          remoteSettings,
+          remotePromos,
+          remoteServices,
+          remotePressOn,
+          remoteInventory,
+          remoteCourses,
+          remoteAdditionals,
+          remoteCatbeeConfig,
+          remoteCatbeeKnowledge,
+          remoteAppointments,
+          remoteStoreOrders,
+        ] = await Promise.all([
           loadSiteStateFromSupabase<StudioSettings>(`app_state:${SETTINGS_STORAGE_KEY}`),
           loadSiteStateFromSupabase<PromoDesign[]>(`app_state:${PROMOS_STORAGE_KEY}`),
+          loadSiteStateFromSupabase<ServiceItem[]>(`app_state:${SERVICES_CATALOG_STORAGE_KEY}`),
+          loadSiteStateFromSupabase<PressOnItem[]>(`app_state:${PRESS_ON_STORAGE_KEY}`),
+          loadSiteStateFromSupabase<InventoryItem[]>(`app_state:${GABEE_STUDIO_INVENTORY_KEY}`),
+          loadSiteStateFromSupabase<CourseItem[]>(`app_state:${COURSES_STORAGE_KEY}`),
+          loadSiteStateFromSupabase<AdditionalItem[]>(`app_state:${ADDITIONALS_STORAGE_KEY}`),
+          loadSiteStateFromSupabase<CatbeeConfig>(`app_state:${CATBEE_CONFIG_STORAGE_KEY}`),
+          loadSiteStateFromSupabase<CatbeeKnowledgeItem[]>(`app_state:${CATBEE_KNOWLEDGE_STORAGE_KEY}`),
+          loadSiteStateFromSupabase<Appointment[]>(`app_state:${APPOINTMENTS_STORAGE_KEY}`),
+          loadSiteStateFromSupabase<StoreOrder[]>(`app_state:${STORE_ORDERS_STORAGE_KEY}`),
         ]);
+
         if (remoteSettings && typeof remoteSettings === 'object') {
           const mergedSettings: StudioSettings = {
             ...INITIAL_SETTINGS,
@@ -1055,14 +1100,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setSettings(mergedSettings);
           safeSetLocalStorage(SETTINGS_STORAGE_KEY, JSON.stringify(mergedSettings));
         }
+
         if (Array.isArray(remotePromos) && remotePromos.length > 0) {
           setPromoDesigns(remotePromos);
           safeSetLocalStorage(PROMOS_STORAGE_KEY, JSON.stringify(remotePromos));
+        }
+
+        if (Array.isArray(remoteServices) && remoteServices.length > 0) {
+          setServicesCatalog(remoteServices);
+          safeSetLocalStorage(SERVICES_CATALOG_STORAGE_KEY, JSON.stringify(remoteServices));
+        }
+
+        if (Array.isArray(remotePressOn) && remotePressOn.length > 0) {
+          setPressOnCatalog(remotePressOn);
+          safeSetLocalStorage(PRESS_ON_STORAGE_KEY, JSON.stringify(remotePressOn));
+        }
+
+        if (Array.isArray(remoteInventory) && remoteInventory.length > 0) {
+          setInventoryList(remoteInventory);
+          safeSetLocalStorage(GABEE_STUDIO_INVENTORY_KEY, JSON.stringify(remoteInventory));
+        }
+
+        if (Array.isArray(remoteCourses) && remoteCourses.length > 0) {
+          setCoursesList(remoteCourses);
+          safeSetLocalStorage(COURSES_STORAGE_KEY, JSON.stringify(remoteCourses));
+        }
+
+        if (Array.isArray(remoteAdditionals) && remoteAdditionals.length > 0) {
+          setAdditionalsList(remoteAdditionals);
+          safeSetLocalStorage(ADDITIONALS_STORAGE_KEY, JSON.stringify(remoteAdditionals));
+        }
+
+        if (remoteCatbeeConfig && typeof remoteCatbeeConfig.systemPrompt === 'string') {
+          const mergedCfg = { ...DEFAULT_CATBEE_CONFIG, ...remoteCatbeeConfig };
+          setCatbeeConfig(mergedCfg);
+          safeSetLocalStorage(CATBEE_CONFIG_STORAGE_KEY, JSON.stringify(mergedCfg));
+        }
+
+        if (Array.isArray(remoteCatbeeKnowledge) && remoteCatbeeKnowledge.length > 0) {
+          setCatbeeKnowledge(remoteCatbeeKnowledge);
+          safeSetLocalStorage(CATBEE_KNOWLEDGE_STORAGE_KEY, JSON.stringify(remoteCatbeeKnowledge));
+        }
+
+        if (Array.isArray(remoteAppointments) && remoteAppointments.length > 0) {
+          setAppointments(remoteAppointments);
+          safeSetLocalStorage(APPOINTMENTS_STORAGE_KEY, JSON.stringify(remoteAppointments));
+        }
+
+        if (Array.isArray(remoteStoreOrders) && remoteStoreOrders.length > 0) {
+          setStoreOrders(remoteStoreOrders);
+          safeSetLocalStorage(STORE_ORDERS_STORAGE_KEY, JSON.stringify(remoteStoreOrders));
         }
       } catch {
         // Ignora errores de red para no bloquear la carga inicial
       }
     })();
+
     unsubs.push(
       subscribeToPromoDesigns((designs) => {
         if (designs && designs.length > 0) {
@@ -1078,6 +1171,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (apts && apts.length > 0) {
           setAppointments(apts);
           safeSetLocalStorage(APPOINTMENTS_STORAGE_KEY, JSON.stringify(apts));
+          syncAppStateToSupabase(APPOINTMENTS_STORAGE_KEY, apts);
         }
       })
     );
@@ -1111,6 +1205,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const merged = Array.from(map.values());
             merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
             safeSetLocalStorage(STORE_ORDERS_STORAGE_KEY, JSON.stringify(merged));
+            syncAppStateToSupabase(STORE_ORDERS_STORAGE_KEY, merged);
             return merged;
           });
         }
@@ -1166,37 +1261,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
     );
 
-    unsubs.push(
-      subscribeToCourses((items) => {
-        setCoursesList((prevLocal) => {
-          const storedLocal = safeGetLocalStorage<CourseItem[]>(COURSES_STORAGE_KEY, prevLocal);
-          if (!items || items.length === 0) {
-            return storedLocal;
-          }
-          const itemMap = new Map<string, CourseItem>();
-          items.forEach((item) => itemMap.set(item.id, item));
-          storedLocal.forEach((item) => {
-            const existing = itemMap.get(item.id);
-            itemMap.set(item.id, existing ? { ...existing, ...item } : item);
-          });
-          const merged = Array.from(itemMap.values());
-          safeSetLocalStorage(COURSES_STORAGE_KEY, JSON.stringify(merged));
-          return merged;
-        });
-      })
-    );
-
-    // Los documentos semilla del catálogo anterior se purgan una vez por carga.
-    // Así, aunque Firestore los conservara de una versión previa, no vuelven a
-    // aparecer en la web ni en el panel.
     void deleteSeedReviewsFromFirestore();
 
     unsubs.push(
       subscribeToReviews((items) => {
         setReviewsList((prevLocal) => {
           const storedLocal = safeGetLocalStorage<ReviewItem[]>(REVIEWS_STORAGE_KEY, prevLocal);
-          // El snapshot remoto manda: un ID eliminado nunca se reincorpora,
-          // aunque otro dispositivo envíe un snapshot desactualizado.
           const remote = sanitizeReviews<ReviewItem>(items || []);
           const local = sanitizeReviews<ReviewItem>(storedLocal);
           const itemMap = new Map<string, ReviewItem>();
@@ -1219,73 +1289,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const saveAndSetInventory = (updatedList: InventoryItem[]) => {
     setInventoryList(updatedList);
     safeSetLocalStorage(GABEE_STUDIO_INVENTORY_KEY, JSON.stringify(updatedList));
-    for (const item of updatedList) {
-      saveInventoryItemToFirestore(item);
-    }
+    syncAppStateToSupabase(GABEE_STUDIO_INVENTORY_KEY, updatedList);
   };
 
   const addInventoryItem = (itemData: Omit<InventoryItem, 'id'>): InventoryItem => {
     const newItem: InventoryItem = {
       ...itemData,
       id: `inv-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      image: itemData.image && itemData.image.trim() !== '' ? itemData.image.trim() : '/assets/aistudio/PO_1_f5e6a392.JPG',
+      image:
+        itemData.image && itemData.image.trim() !== ''
+          ? itemData.image.trim()
+          : '/assets/aistudio/PO_1_f5e6a392.JPG',
     };
     setInventoryList((prev) => {
       const updated = [...prev, newItem];
       safeSetLocalStorage(GABEE_STUDIO_INVENTORY_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(GABEE_STUDIO_INVENTORY_KEY, updated);
       return updated;
     });
-    saveInventoryItemToFirestore(newItem);
     return newItem;
   };
 
   const updateInventoryItem = (id: string, updates: Partial<InventoryItem>) => {
-    let updatedItem: InventoryItem | undefined;
     setInventoryList((prev) => {
       const updated = prev.map((item) => {
         if (item.id === id) {
-          const finalImage = updates.image !== undefined
-            ? (updates.image.trim() !== '' ? updates.image.trim() : item.image)
-            : item.image;
-          updatedItem = { ...item, ...updates, image: finalImage };
-          return updatedItem;
+          const finalImage =
+            updates.image !== undefined
+              ? updates.image.trim() !== ''
+                ? updates.image.trim()
+                : item.image
+              : item.image;
+          return { ...item, ...updates, image: finalImage };
         }
         return item;
       });
       safeSetLocalStorage(GABEE_STUDIO_INVENTORY_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(GABEE_STUDIO_INVENTORY_KEY, updated);
       return updated;
     });
-    if (updatedItem) {
-      saveInventoryItemToFirestore(updatedItem);
-    }
   };
 
   const deleteInventoryItem = (id: string) => {
     setInventoryList((prev) => {
       const updated = prev.filter((item) => item.id !== id);
       safeSetLocalStorage(GABEE_STUDIO_INVENTORY_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(GABEE_STUDIO_INVENTORY_KEY, updated);
       return updated;
     });
-    deleteInventoryItemFromFirestore(id);
   };
 
   const resetInventoryList = () => {
     setInventoryList(INITIAL_INVENTORY_DATA);
     safeSetLocalStorage(GABEE_STUDIO_INVENTORY_KEY, JSON.stringify(INITIAL_INVENTORY_DATA));
-    batchSaveInitialInventory(INITIAL_INVENTORY_DATA);
+    syncAppStateToSupabase(GABEE_STUDIO_INVENTORY_KEY, INITIAL_INVENTORY_DATA);
   };
-
-  const [coursesList, setCoursesList] = useState<CourseItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(COURSES_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {
-    }
-    return INITIAL_COURSES_DATA;
-  });
 
   const [selectedCourseItem, setSelectedCourseItem] = useState<CourseItem | null>(null);
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
@@ -1304,77 +1362,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newItem: CourseItem = {
       ...itemData,
       id: `course-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      image: itemData.image && itemData.image.trim() !== '' ? itemData.image.trim() : '/src/assets/images/nail_chrome_cateye_1792392507727.jpg',
+      image:
+        itemData.image && itemData.image.trim() !== ''
+          ? itemData.image.trim()
+          : '/src/assets/images/nail_chrome_cateye_1792392507727.jpg',
       whatYouWillLearn: itemData.whatYouWillLearn || [],
     };
     setCoursesList((prev) => {
       const updated = [...prev, newItem];
       safeSetLocalStorage(COURSES_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(COURSES_STORAGE_KEY, updated);
       return updated;
     });
-    saveCourseItemToFirestore(newItem);
     return newItem;
   };
 
   const updateCourseItem = (id: string, updates: Partial<CourseItem>) => {
-    let updatedItem: CourseItem | undefined;
     setCoursesList((prev) => {
       const updated = prev.map((item) => {
         if (item.id === id) {
-          const finalImage = updates.image !== undefined
-            ? (updates.image.trim() !== '' ? updates.image.trim() : item.image)
-            : item.image;
-          updatedItem = { ...item, ...updates, image: finalImage };
-          return updatedItem;
+          const finalImage =
+            updates.image !== undefined
+              ? updates.image.trim() !== ''
+                ? updates.image.trim()
+                : item.image
+              : item.image;
+          return { ...item, ...updates, image: finalImage };
         }
         return item;
       });
       safeSetLocalStorage(COURSES_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(COURSES_STORAGE_KEY, updated);
       return updated;
     });
-    if (updatedItem) {
-      saveCourseItemToFirestore(updatedItem);
-    }
   };
 
   const deleteCourseItem = (id: string) => {
     setCoursesList((prev) => {
       const updated = prev.filter((item) => item.id !== id);
       safeSetLocalStorage(COURSES_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(COURSES_STORAGE_KEY, updated);
       return updated;
     });
-    deleteCourseItemFromFirestore(id);
   };
 
   const resetCoursesList = () => {
     setCoursesList(INITIAL_COURSES_DATA);
     safeSetLocalStorage(COURSES_STORAGE_KEY, JSON.stringify(INITIAL_COURSES_DATA));
-    batchSaveInitialCourses(INITIAL_COURSES_DATA);
+    syncAppStateToSupabase(COURSES_STORAGE_KEY, INITIAL_COURSES_DATA);
   };
-
-  const [reviewsList, setReviewsList] = useState<ReviewItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(REVIEWS_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          const sanitized = sanitizeReviews<ReviewItem>(parsed as ReviewItem[]);
-          // Si quedaban reseñas semilla o eliminadas de una versión anterior,
-          // se limpian del almacenamiento local antes de renderizar.
-          safeSetLocalStorage(REVIEWS_STORAGE_KEY, JSON.stringify(sanitized));
-          return sanitized;
-        }
-      }
-    } catch {
-    }
-    // No hay reseñas precargadas: la lista nace vacía.
-    return [];
-  });
 
   const addReviewItem = (itemData: Omit<ReviewItem, 'id' | 'createdAt'>): ReviewItem => {
     const rawMedia = itemData.mediaUrl?.trim();
     const cleanMedia =
-      rawMedia && rawMedia !== '' && rawMedia !== 'none' && rawMedia !== 'no-image' && rawMedia !== 'undefined'
+      rawMedia &&
+      rawMedia !== '' &&
+      rawMedia !== 'none' &&
+      rawMedia !== 'no-image' &&
+      rawMedia !== 'undefined'
         ? rawMedia
         : undefined;
 
@@ -1389,6 +1434,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setReviewsList((prev) => {
       const updated = [newItem, ...prev];
       safeSetLocalStorage(REVIEWS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(REVIEWS_STORAGE_KEY, updated);
       return updated;
     });
     saveReviewItemToFirestore(newItem);
@@ -1396,8 +1442,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateReviewItem = (id: string, updates: Partial<ReviewItem>) => {
-    // Si una reseña pendiente se vuelve a aprobar, deja de estar marcada como
-    // eliminada para que el snapshot remoto pueda volver a traerla.
     unmarkReviewsAsDeleted([id]);
     let updatedItem: ReviewItem | undefined;
     setReviewsList((prev) => {
@@ -1409,6 +1453,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return item;
       });
       safeSetLocalStorage(REVIEWS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(REVIEWS_STORAGE_KEY, updated);
       return updated;
     });
     if (updatedItem) {
@@ -1417,20 +1462,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteReviewItem = (id: string) => {
-    // La marca se escribe ANTES de actualizar el estado: si llega un snapshot
-    // remoto a mitad de operación, el ID filtrado no puede reaparecer.
     markReviewsAsDeleted([id]);
     setReviewsList((prev) => {
       const updated = prev.filter((item) => item.id !== id);
       safeSetLocalStorage(REVIEWS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(REVIEWS_STORAGE_KEY, updated);
       return updated;
     });
     void deleteReviewItemFromFirestore(id);
   };
-
-  const [reviewedTargetIds, setReviewedTargetIds] = useState<string[]>(() => {
-    return safeGetLocalStorage<string[]>(REVIEWED_TARGETS_STORAGE_KEY, []);
-  });
 
   const markTargetAsReviewed = (targetId: string) => {
     setReviewedTargetIds((prev) => {
@@ -1441,11 +1481,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  /**
-   * Antes "Restablecer" volvía a sembrar reseñas falsas. Ahora vacía
-   * permanentemente el catálogo: local, remoto y con tombstones para que
-   * ningún snapshot antiguo pueda revivirlas.
-   */
   const resetReviewsList = () => {
     const idsToClear = Array.from(
       new Set([...reviewsList.map((item) => item.id), ...SEED_REVIEW_IDS])
@@ -1453,31 +1488,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     markReviewsAsDeleted(idsToClear);
     setReviewsList([]);
     safeSetLocalStorage(REVIEWS_STORAGE_KEY, JSON.stringify([]));
+    syncAppStateToSupabase(REVIEWS_STORAGE_KEY, []);
     void clearAllReviewsFromFirestore(idsToClear);
   };
-
-  // -------------------------------------------------------------
-  // Catbee Brain Knowledge & Configuration State (Q&A Dinámico)
-  // -------------------------------------------------------------
-  const [catbeeConfig, setCatbeeConfig] = useState<CatbeeConfig>(() => {
-    try {
-      const saved = localStorage.getItem(CATBEE_CONFIG_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed.systemPrompt === 'string') {
-          // Merge with defaults so configurations saved before the WhatsApp
-          // handoff template existed keep working without missing fields.
-          return { ...DEFAULT_CATBEE_CONFIG, ...parsed };
-        }
-      }
-    } catch {}
-    return DEFAULT_CATBEE_CONFIG;
-  });
 
   const updateCatbeeConfig = (newConfig: Partial<CatbeeConfig>) => {
     setCatbeeConfig((prev) => {
       const updated = { ...prev, ...newConfig };
       safeSetLocalStorage(CATBEE_CONFIG_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(CATBEE_CONFIG_STORAGE_KEY, updated);
       return updated;
     });
   };
@@ -1485,20 +1504,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const resetCatbeeConfig = () => {
     setCatbeeConfig(DEFAULT_CATBEE_CONFIG);
     safeSetLocalStorage(CATBEE_CONFIG_STORAGE_KEY, JSON.stringify(DEFAULT_CATBEE_CONFIG));
+    syncAppStateToSupabase(CATBEE_CONFIG_STORAGE_KEY, DEFAULT_CATBEE_CONFIG);
   };
 
-  const [catbeeKnowledge, setCatbeeKnowledge] = useState<CatbeeKnowledgeItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(CATBEE_KNOWLEDGE_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return INITIAL_CATBEE_KNOWLEDGE;
-  });
-
-  const addCatbeeKnowledge = (itemData: Omit<CatbeeKnowledgeItem, 'id' | 'updatedAt'>): CatbeeKnowledgeItem => {
+  const addCatbeeKnowledge = (
+    itemData: Omit<CatbeeKnowledgeItem, 'id' | 'updatedAt'>
+  ): CatbeeKnowledgeItem => {
     const newItem: CatbeeKnowledgeItem = {
       ...itemData,
       id: `kb-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -1509,6 +1520,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCatbeeKnowledge((prev) => {
       const updated = [newItem, ...prev];
       safeSetLocalStorage(CATBEE_KNOWLEDGE_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(CATBEE_KNOWLEDGE_STORAGE_KEY, updated);
       return updated;
     });
     return newItem;
@@ -1523,6 +1535,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return item;
       });
       safeSetLocalStorage(CATBEE_KNOWLEDGE_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(CATBEE_KNOWLEDGE_STORAGE_KEY, updated);
       return updated;
     });
   };
@@ -1531,6 +1544,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCatbeeKnowledge((prev) => {
       const updated = prev.filter((item) => item.id !== id);
       safeSetLocalStorage(CATBEE_KNOWLEDGE_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(CATBEE_KNOWLEDGE_STORAGE_KEY, updated);
       return updated;
     });
   };
@@ -1538,19 +1552,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const resetCatbeeKnowledge = () => {
     setCatbeeKnowledge(INITIAL_CATBEE_KNOWLEDGE);
     safeSetLocalStorage(CATBEE_KNOWLEDGE_STORAGE_KEY, JSON.stringify(INITIAL_CATBEE_KNOWLEDGE));
+    syncAppStateToSupabase(CATBEE_KNOWLEDGE_STORAGE_KEY, INITIAL_CATBEE_KNOWLEDGE);
   };
-
-  const [pressOnCatalog, setPressOnCatalog] = useState<PressOnItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(PRESS_ON_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {
-    }
-    return INITIAL_PRESS_ON_ITEMS;
-  });
 
   const addPressOnItem = (itemData: Omit<PressOnItem, 'id'>) => {
     const newItem: PressOnItem = {
@@ -1560,55 +1563,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPressOnCatalog((prev) => {
       const updated = [...prev, newItem];
       safeSetLocalStorage(PRESS_ON_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(PRESS_ON_STORAGE_KEY, updated);
       return updated;
     });
-    savePressOnItemToFirestore(newItem);
   };
 
   const updatePressOnItem = (id: string, updates: Partial<PressOnItem>) => {
-    let updatedItem: PressOnItem | undefined;
     setPressOnCatalog((prev) => {
-      const updated = prev.map((item) => {
-        if (item.id === id) {
-          updatedItem = { ...item, ...updates };
-          return updatedItem;
-        }
-        return item;
-      });
+      const updated = prev.map((item) => (item.id === id ? { ...item, ...updates } : item));
       safeSetLocalStorage(PRESS_ON_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(PRESS_ON_STORAGE_KEY, updated);
       return updated;
     });
-    if (updatedItem) {
-      savePressOnItemToFirestore(updatedItem);
-    }
   };
 
   const deletePressOnItem = (id: string) => {
     setPressOnCatalog((prev) => {
       const updated = prev.filter((item) => item.id !== id);
       safeSetLocalStorage(PRESS_ON_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(PRESS_ON_STORAGE_KEY, updated);
       return updated;
     });
-    deletePressOnItemFromFirestore(id);
   };
 
   const resetPressOnCatalog = () => {
     setPressOnCatalog(INITIAL_PRESS_ON_ITEMS);
     safeSetLocalStorage(PRESS_ON_STORAGE_KEY, JSON.stringify(INITIAL_PRESS_ON_ITEMS));
-    batchSaveInitialPressOn(INITIAL_PRESS_ON_ITEMS);
+    syncAppStateToSupabase(PRESS_ON_STORAGE_KEY, INITIAL_PRESS_ON_ITEMS);
   };
-
-  const [servicesCatalog, setServicesCatalog] = useState<ServiceItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(SERVICES_CATALOG_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {
-    }
-    return INITIAL_SERVICES_CATALOG;
-  });
 
   const addServiceItem = (itemData: Omit<ServiceItem, 'id'>) => {
     const newItem: ServiceItem = {
@@ -1618,42 +1600,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setServicesCatalog((prev) => {
       const updated = [...prev, newItem];
       safeSetLocalStorage(SERVICES_CATALOG_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(SERVICES_CATALOG_STORAGE_KEY, updated);
       return updated;
     });
-    saveServiceItemToFirestore(newItem);
   };
 
   const updateServiceItem = (id: string, updates: Partial<ServiceItem>) => {
-    let updatedItem: ServiceItem | undefined;
     setServicesCatalog((prev) => {
-      const updated = prev.map((item) => {
-        if (item.id === id) {
-          updatedItem = { ...item, ...updates };
-          return updatedItem;
-        }
-        return item;
-      });
+      const updated = prev.map((item) => (item.id === id ? { ...item, ...updates } : item));
       safeSetLocalStorage(SERVICES_CATALOG_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(SERVICES_CATALOG_STORAGE_KEY, updated);
       return updated;
     });
-    if (updatedItem) {
-      saveServiceItemToFirestore(updatedItem);
-    }
   };
 
   const deleteServiceItem = (id: string) => {
     setServicesCatalog((prev) => {
       const updated = prev.filter((item) => item.id !== id);
       safeSetLocalStorage(SERVICES_CATALOG_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(SERVICES_CATALOG_STORAGE_KEY, updated);
       return updated;
     });
-    deleteServiceItemFromFirestore(id);
   };
 
   const resetServicesCatalog = () => {
     setServicesCatalog(INITIAL_SERVICES_CATALOG);
     safeSetLocalStorage(SERVICES_CATALOG_STORAGE_KEY, JSON.stringify(INITIAL_SERVICES_CATALOG));
-    batchSaveInitialServices(INITIAL_SERVICES_CATALOG);
+    syncAppStateToSupabase(SERVICES_CATALOG_STORAGE_KEY, INITIAL_SERVICES_CATALOG);
   };
 
   const openBooking = (serviceType: ServiceType, promoId?: string, preloadedSystem?: string) => {
@@ -1722,34 +1695,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       syncAppStateToSupabase(PROMOS_STORAGE_KEY, updated);
       return updated;
     });
-    savePromoDesignToFirestore(newDesign);
   };
 
   const updatePromoDesign = (id: string, updates: Partial<PromoDesign>) => {
-    let updatedDesign: PromoDesign | undefined;
     setPromoDesigns((prev) => {
-      const updated = prev.map((p) => {
-        if (p.id === id) {
-          updatedDesign = { ...p, ...updates };
-          return updatedDesign;
-        }
-        return p;
-      });
+      const updated = prev.map((p) => (p.id === id ? { ...p, ...updates } : p));
       safeSetLocalStorage(PROMOS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(PROMOS_STORAGE_KEY, updated);
       return updated;
     });
-    if (updatedDesign) {
-      savePromoDesignToFirestore(updatedDesign);
-    }
   };
 
   const deletePromoDesign = (id: string) => {
     setPromoDesigns((prev) => {
       const updated = prev.filter((p) => p.id !== id);
       safeSetLocalStorage(PROMOS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(PROMOS_STORAGE_KEY, updated);
       return updated;
     });
-    deletePromoDesignFromFirestore(id);
   };
 
   const createAppointment = (
@@ -1780,6 +1743,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAppointments((prev) => {
       const updated = [newAppointment, ...prev];
       safeSetLocalStorage(APPOINTMENTS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(APPOINTMENTS_STORAGE_KEY, updated);
       return updated;
     });
     saveAppointmentToFirestore(newAppointment);
@@ -1802,6 +1766,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return a;
       });
       safeSetLocalStorage(APPOINTMENTS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(APPOINTMENTS_STORAGE_KEY, updated);
       return updated;
     });
     if (updatedAppointment) {
@@ -1809,8 +1774,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         recordOperationCode(updates.paymentOperationNumber, 'appointment');
       }
       saveAppointmentToFirestore(updatedAppointment);
-      // Si se agrega/actualiza el número de operación o datos clave tras la reserva provisional,
-      // reenviar notificación a Telegram para que no quede como "No registrado".
       const prevOp = String(previousAppointment?.paymentOperationNumber || '').trim();
       const nextOp = String(updatedAppointment.paymentOperationNumber || '').trim();
       const opNowProvided = !!nextOp && nextOp !== prevOp;
@@ -1821,7 +1784,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return updatedAppointment;
   };
 
-  const updateAppointmentStatus = (id: string, status: Appointment['status'], depositPaid?: boolean) => {
+  const updateAppointmentStatus = (
+    id: string,
+    status: Appointment['status'],
+    depositPaid?: boolean
+  ) => {
     let updatedAppointment: Appointment | undefined;
     setAppointments((prev) => {
       const updated = prev.map((a) => {
@@ -1832,6 +1799,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return a;
       });
       safeSetLocalStorage(APPOINTMENTS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(APPOINTMENTS_STORAGE_KEY, updated);
       return updated;
     });
     if (updatedAppointment) {
@@ -1843,6 +1811,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAppointments((prev) => {
       const updated = prev.filter((a) => a.id !== id);
       safeSetLocalStorage(APPOINTMENTS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(APPOINTMENTS_STORAGE_KEY, updated);
       return updated;
     });
     deleteAppointmentFromFirestore(id);
@@ -1854,13 +1823,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cancelled.forEach((a) => deleteAppointmentFromFirestore(a.id));
       const updated = prev.filter((a) => a.status !== 'cancelled');
       safeSetLocalStorage(APPOINTMENTS_STORAGE_KEY, JSON.stringify(updated));
+      syncAppStateToSupabase(APPOINTMENTS_STORAGE_KEY, updated);
       return updated;
     });
   };
 
-  // ── SINCRONIZACIÓN CON TELEGRAM ──────────────────────────────────────────
-  // El backend recibe los clics de los botones y expone las decisiones.
-  // Aquí se aplican al monedero virtual y al estado de los pedidos/citas.
   const telegramSalesRef = useRef({ rechargeRequests, storeOrders, appointments });
   const telegramAppliedActionsRef = useRef<string[]>(
     safeGetLocalStorage<string[]>(TELEGRAM_APPLIED_ACTIONS_KEY, [])
@@ -1904,7 +1871,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         for (const action of actions) {
           if (telegramAppliedActionsRef.current.includes(action.id)) continue;
-          const { rechargeRequests: reqs, storeOrders: orders, appointments: apts } = telegramSalesRef.current;
+          const { rechargeRequests: reqs, storeOrders: orders, appointments: apts } =
+            telegramSalesRef.current;
 
           if (action.type === 'recharge') {
             const request = reqs.find((r) => r.id === action.targetId);
@@ -1938,9 +1906,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
 
           if (action.type === 'appointment') {
-            const appointment = apts.find((a) => a.id === action.targetId || a.code === action.targetId);
+            const appointment = apts.find(
+              (a) => a.id === action.targetId || a.code === action.targetId
+            );
             if (!appointment) continue;
-            // Aplicar solo si aún está pendiente de confirmación/depósito
             if (!['pending_deposit', 'pending'].includes(appointment.status)) {
               markApplied(action.id);
               continue;
@@ -1948,7 +1917,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (action.decision === 'accept') {
               telegramHandlersRef.current.updateAppointmentStatus(appointment.id, 'confirmed', true);
             } else {
-              telegramHandlersRef.current.updateAppointmentStatus(appointment.id, 'cancelled', appointment.depositPaid);
+              telegramHandlersRef.current.updateAppointmentStatus(
+                appointment.id,
+                'cancelled',
+                appointment.depositPaid
+              );
             }
             markApplied(action.id);
           }
@@ -1979,8 +1952,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ? { ...newSettings, adminPassword: newSettings.adminPassword.trim() }
         : newSettings;
 
-    // La contraseña se escribe primero en la clave dedicada: así el login la
-    // ve de inmediato aunque Firestore falle o responda tarde.
     if (normalized.adminPassword) {
       persistAdminPassword(normalized.adminPassword);
     }
@@ -1988,7 +1959,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSettings((prev) => {
       const updated = { ...prev, ...normalized };
       safeSetLocalStorage(SETTINGS_STORAGE_KEY, JSON.stringify(updated));
-      saveSettingsToFirestore(updated);
+      syncAppStateToSupabase(SETTINGS_STORAGE_KEY, updated);
       return updated;
     });
   };
@@ -1997,7 +1968,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     persistAdminPassword(DEFAULT_ADMIN_PASSWORD);
     setSettings(INITIAL_SETTINGS);
     safeSetLocalStorage(SETTINGS_STORAGE_KEY, JSON.stringify(INITIAL_SETTINGS));
-    saveSettingsToFirestore(INITIAL_SETTINGS);
+    syncAppStateToSupabase(SETTINGS_STORAGE_KEY, INITIAL_SETTINGS);
   };
 
   const resetCustomConfig = () => {
@@ -2020,11 +1991,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const phone = settings.whatsappNumber || '934403311';
     const cleanPhone = '51' + phone.replace(/[^0-9]/g, '').replace(/^51/, '');
 
-    // Formateo dinámico del código
     const currentYearShort = new Date().getFullYear().toString().slice(-2);
     let resCode = appointment.code || '';
     if (!resCode.startsWith('NS') && !resCode.startsWith('PS') && !resCode.startsWith('PO')) {
-      const prefix = appointment.serviceType === 'promotion' ? `PS${currentYearShort}_` : `NS${currentYearShort}_`;
+      const prefix =
+        appointment.serviceType === 'promotion' ? `PS${currentYearShort}_` : `NS${currentYearShort}_`;
       resCode = `${prefix}${resCode}`;
     }
 
@@ -2037,9 +2008,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       !appointment.locationType ||
       (appointment.locationType !== 'home' && !appointment.homeAddress?.trim());
     const modalidad = isStudio ? 'En Estudio' : 'A Domicilio';
-    const isEsmaltado = appointment.customDetails?.system === 'esmaltado_gel' ||
+    const isEsmaltado =
+      appointment.customDetails?.system === 'esmaltado_gel' ||
       (appointment.promoDesignTitle || '').toLowerCase().includes('esmaltado');
-    const isRemoval = appointment.serviceType === 'removal' || !!appointment.removalDetails;
 
     let direccion = 'N/A';
     let referencia = 'N/A';
@@ -2053,12 +2024,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const cumpleanos = (appointment.birthDate || currentUser?.birthDate || '').trim() || 'N/A';
     const instagram = (appointment.clientInstagram || currentUser?.instagram || '').trim() || 'N/A';
 
-    // Lista de adicionales
-    const adicionalesText = (appointment.additionals && appointment.additionals.length > 0)
-      ? appointment.additionals
-          .map((id) => additionalsList.find((a) => a.id === id)?.name || id)
-          .join(', ')
-      : 'N/A';
+    const adicionalesText =
+      appointment.additionals && appointment.additionals.length > 0
+        ? appointment.additionals
+            .map((id) => additionalsList.find((a) => a.id === id)?.name || id)
+            .join(', ')
+        : 'N/A';
 
     const montoTotal = `S/. ${appointment.totalPrice.toFixed(2)}`;
     const adelanto = `S/. ${appointment.depositRequired.toFixed(2)}`;
@@ -2066,28 +2037,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const metodo = appointment.paymentMethod ? appointment.paymentMethod.toUpperCase() : 'YAPE';
     const operacion = appointment.paymentOperationNumber?.trim() || '';
 
-    // Forma y largo
     const shapeObj = NAIL_SHAPES.find((s) => s.id === appointment.customDetails?.shape);
     const formaText = shapeObj ? shapeObj.name : 'Almendra';
 
     const lengthObj = NAIL_LENGTHS.find((l) => l.id === appointment.customDetails?.lengthId);
-    const largoText = lengthObj ? (lengthObj.range || lengthObj.label).replace(' - ', ' | ') : 'Natural / Corto (S)';
+    const largoText = lengthObj
+      ? (lengthObj.range || lengthObj.label).replace(' - ', ' | ')
+      : 'Natural / Corto (S)';
 
-    const levelText = ((appointment.customDetails?.level as any) === 'sencillo' || (appointment.customDetails?.level as any) === 'basico')
-      ? 'Sutil (S)'
-      : appointment.customDetails?.level === 'complejo'
-      ? 'Complejo (C)'
-      : 'Moderado (M)';
+    const levelText =
+      (appointment.customDetails?.level as any) === 'sencillo' ||
+      (appointment.customDetails?.level as any) === 'basico'
+        ? 'Sutil (S)'
+        : appointment.customDetails?.level === 'complejo'
+        ? 'Complejo (C)'
+        : 'Moderado (M)';
 
-    const detallesDiseno = appointment.notes?.trim() || appointment.promoDesignTitle || 'Diseño según catálogo / referencia';
-
+    const detallesDiseno =
+      appointment.notes?.trim() || appointment.promoDesignTitle || 'Diseño según catálogo / referencia';
 
     let lines: string[] = [];
 
-    // CASO A: RETIRO DE SISTEMA
     if (appointment.serviceType === 'removal' || appointment.removalDetails) {
-      const removalServiceOverride = servicesCatalog.find((s) => s.removalOptions && s.removalOptions.length > 0);
-      const removalCatalog = removalServiceOverride?.removalOptions?.length ? removalServiceOverride.removalOptions : REMOVAL_SERVICE_OPTIONS;
+      const removalServiceOverride = servicesCatalog.find(
+        (s) => s.removalOptions && s.removalOptions.length > 0
+      );
+      const removalCatalog = removalServiceOverride?.removalOptions?.length
+        ? removalServiceOverride.removalOptions
+        : REMOVAL_SERVICE_OPTIONS;
       const removalOption = removalCatalog.find(
         (opt) => opt.id === appointment.removalDetails?.type
       );
@@ -2121,9 +2098,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         '──────────────────────────',
         '*¡Hola Gaby! Ya realicé mi pago correspondiente para agendar mi cita. ¡Muchas gracias! ♡*',
       ];
-    }
-    // CASO B: PROMOCIONES DE SISTEMA
-    else if (appointment.serviceType === 'promotion') {
+    } else if (appointment.serviceType === 'promotion') {
       lines = [
         '*✦ CONFIRMACIÓN DE CITA PROMOCIONAL | GABEE STUDIO ✦*',
         `*✧ Reserva:* ${resCode}`,
@@ -2152,14 +2127,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         '*¡Hola Gaby! Ya realicé mi pago correspondiente para agendar mi cita. ¡Muchas gracias! ♡*',
       ];
 
-      // SOLO PROMO 2x1: línea adicional al final con los datos esenciales de la acompañante.
       const linkedPromo = appointment.promoDesignId
         ? promoDesigns.find((p) => p.id === appointment.promoDesignId)
         : undefined;
       if ((appointment.promoType || linkedPromo?.promoType) === '2x1' && appointment.promoCompanion) {
         const companion = appointment.promoCompanion;
         const companionLevel =
-          companion.level === 'complejo' ? 'Complejo (C)' : companion.level === 'sencillo' ? 'Sutil (S)' : 'Moderado (M)';
+          companion.level === 'complejo'
+            ? 'Complejo (C)'
+            : companion.level === 'sencillo'
+            ? 'Sutil (S)'
+            : 'Moderado (M)';
         const companionSystemLabel: Record<string, string> = {
           polygel: 'Polygel',
           softgel: 'Soft Gel',
@@ -2169,12 +2147,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           esmaltado_gel: 'Esmaltado en Gel',
         };
         lines.push(
-          `Acompañante 2x1: ${companion.name || 'Sin nombre'} · Tel: ${companion.phone || 'Sin teléfono'} · ${companionSystemLabel[companion.system] || companion.system || 'Sistema promocional'} / ${companionLevel}`
+          `Acompañante 2x1: ${companion.name || 'Sin nombre'} · Tel: ${
+            companion.phone || 'Sin teléfono'
+          } · ${companionSystemLabel[companion.system] || companion.system || 'Sistema promocional'} / ${companionLevel}`
         );
       }
-    }
-    // CASO C: NUESTROS SERVICIOS (General & Esmaltado)
-    else {
+    } else {
       lines = [
         '*✦ CONFIRMACIÓN DE CITA | GABEE STUDIO ✦*',
         `*✧ Reserva:* ${resCode}`,
@@ -2184,7 +2162,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         `*✧ Nivel del Diseño:* ${levelText}`,
       ];
 
-      // Eliminar 'Forma de la Uña' y 'Largo de la Uña' específicamente en Esmaltado Permanente
       if (!isEsmaltado) {
         lines.push(`*✧ Forma de la punta:* ${formaText}`);
         lines.push(`*✧ Largo de la Uña:* ${largoText}`);
@@ -2211,10 +2188,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
     }
 
-    // Determinar flujo para seleccionar plantilla
     let flow = 'nuestros_servicios';
     if (appointment.serviceType === 'removal' || appointment.removalDetails) flow = 'retiro';
-    else if (appointment.customDetails?.system === 'esmaltado_gel' || (appointment.promoDesignTitle || '').toLowerCase().includes('esmaltado')) flow = 'esmaltado';
+    else if (
+      appointment.customDetails?.system === 'esmaltado_gel' ||
+      (appointment.promoDesignTitle || '').toLowerCase().includes('esmaltado')
+    )
+      flow = 'esmaltado';
     else if (appointment.serviceType === 'promotion') flow = 'promo_sistemas';
 
     const SERVICE_SYSTEM_LABELS: Record<string, string> = {
@@ -2226,9 +2206,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       acrilicas: 'Acrílicas',
     };
 
-    const removalServiceOverride = servicesCatalog.find((s) => s.removalOptions && s.removalOptions.length > 0);
-    const removalCatalog = removalServiceOverride?.removalOptions?.length ? removalServiceOverride.removalOptions : REMOVAL_SERVICE_OPTIONS;
-    const removalOptionTitle = removalCatalog.find((opt) => opt.id === appointment.removalDetails?.type)?.title;
+    const removalServiceOverride = servicesCatalog.find(
+      (s) => s.removalOptions && s.removalOptions.length > 0
+    );
+    const removalCatalog = removalServiceOverride?.removalOptions?.length
+      ? removalServiceOverride.removalOptions
+      : REMOVAL_SERVICE_OPTIONS;
+    const removalOptionTitle = removalCatalog.find(
+      (opt) => opt.id === appointment.removalDetails?.type
+    )?.title;
 
     let servicioLabel = appointment.promoDesignTitle || '';
     if (!servicioLabel) {
@@ -2242,13 +2228,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         } else {
           const rawServiceName = (appointment.serviceName || '').trim();
           const normalizedServiceName = rawServiceName.toLowerCase();
-          const isGenericServiceName = !rawServiceName || normalizedServiceName === 'nuestros servicios' || normalizedServiceName === 'nuestro servicio';
-          servicioLabel = systemLabel || (isGenericServiceName ? '' : rawServiceName) || SERVICE_SYSTEM_LABELS[rawServiceName.toLowerCase().replace(/\s+/g, '_')] || rawServiceName || 'Servicio';
+          const isGenericServiceName =
+            !rawServiceName ||
+            normalizedServiceName === 'nuestros servicios' ||
+            normalizedServiceName === 'nuestro servicio';
+          servicioLabel =
+            systemLabel ||
+            (isGenericServiceName ? '' : rawServiceName) ||
+            SERVICE_SYSTEM_LABELS[rawServiceName.toLowerCase().replace(/\s+/g, '_')] ||
+            rawServiceName ||
+            'Servicio';
         }
       } else {
         const rawServiceName = (appointment.serviceName || '').trim();
         const normalizedServiceName = rawServiceName.toLowerCase();
-        const isGenericServiceName = !rawServiceName || normalizedServiceName === 'nuestros servicios' || normalizedServiceName === 'nuestro servicio';
+        const isGenericServiceName =
+          !rawServiceName ||
+          normalizedServiceName === 'nuestros servicios' ||
+          normalizedServiceName === 'nuestro servicio';
         servicioLabel = isGenericServiceName ? 'Servicio' : rawServiceName;
       }
     }
@@ -2266,20 +2263,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       kit: '',
       medidas_der: '',
       medidas_izq: '',
-      anatomia: appointment.customDetails?.system === 'esmaltado_gel' ? 'N/A' : (appointment.customDetails?.shape || 'N/A'),
-      fecha: fecha,
-      hora: hora,
-      modalidad: modalidad,
-      direccion: direccion,
-      referencia: referencia,
-      cumpleanos: cumpleanos,
-      instagram: instagram,
+      anatomia:
+        appointment.customDetails?.system === 'esmaltado_gel'
+          ? 'N/A'
+          : appointment.customDetails?.shape || 'N/A',
+      fecha,
+      hora,
+      modalidad,
+      direccion,
+      referencia,
+      cumpleanos,
+      instagram,
       adicionales: adicionalesText,
       total: montoTotal,
-      adelanto: adelanto,
-      saldo: saldo,
+      adelanto,
+      saldo,
       metodo_pago: metodo,
-      operacion: operacion,
+      operacion,
       numero_operacion: operacion,
     };
 
