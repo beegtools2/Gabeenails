@@ -2405,12 +2405,11 @@ export const UserAccountModal: React.FC<UserAccountModalProps> = ({
                   >
                     Ingresar aquí
                   </button>
-                </div>
-              </div>
-            </form>
-         </div>
-   </form>
- </div>
+      </div>
+    </div>
+  </form>
+  </div>
+  </div>
 </div>
 
       {/* ============================================================== */}
