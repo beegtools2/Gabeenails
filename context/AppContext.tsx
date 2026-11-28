@@ -1040,6 +1040,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
     );
 
+    void (async () => {
+      try {
+        const [remoteSettings, remotePromos] = await Promise.all([
+          loadSiteStateFromSupabase<StudioSettings>(`app_state:${SETTINGS_STORAGE_KEY}`),
+          loadSiteStateFromSupabase<PromoDesign[]>(`app_state:${PROMOS_STORAGE_KEY}`),
+        ]);
+        if (remoteSettings && typeof remoteSettings === 'object') {
+          const mergedSettings: StudioSettings = {
+            ...INITIAL_SETTINGS,
+            ...remoteSettings,
+            adminPassword: remoteSettings.adminPassword || DEFAULT_ADMIN_PASSWORD,
+          };
+          setSettings(mergedSettings);
+          safeSetLocalStorage(SETTINGS_STORAGE_KEY, JSON.stringify(mergedSettings));
+        }
+        if (Array.isArray(remotePromos) && remotePromos.length > 0) {
+          setPromoDesigns(remotePromos);
+          safeSetLocalStorage(PROMOS_STORAGE_KEY, JSON.stringify(remotePromos));
+        }
+      } catch {
+        // Ignora errores de red para no bloquear la carga inicial
+      }
+    })();
     unsubs.push(
       subscribeToPromoDesigns((designs) => {
         if (designs && designs.length > 0) {
