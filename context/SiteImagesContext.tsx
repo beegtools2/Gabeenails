@@ -12,6 +12,7 @@ import {
   saveSiteStateToSupabase,
 } from '../services/supabaseStateService';
 
+export type SiteImage = typeof defaultSiteImage;
 const SUPABASE_IMAGE_VERSIONS_ID = 'site_image_versions';
 
 interface SiteImagesState {
