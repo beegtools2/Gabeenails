@@ -4,10 +4,10 @@ export const SITE_IMAGE_GROUPS = [
   {
     title: 'Términos y Condiciones',
     images: [
-      { key: 'terms-1', label: 'Lámina 1', fallback: `${ASSETS}IMG_9360_1bdc15b7.PNG` },
-      { key: 'terms-2', label: 'Lámina 2', fallback: `${ASSETS}IMG_9361_aba21d4b.PNG` },
-      { key: 'terms-3', label: 'Lámina 3', fallback: `${ASSETS}IMG_9362_07aa3036.PNG` },
-      { key: 'terms-4', label: 'Lámina 4', fallback: `${ASSETS}IMG_9363_3d2b4614.PNG` },
+      { key: 'terms-1', label: 'Lámina 1', fallback: `${ASSETS}page_TyC_01.PNG` },
+      { key: 'terms-2', label: 'Lámina 2', fallback: `${ASSETS}page_TyC_02.PNG` },
+      { key: 'terms-3', label: 'Lámina 3', fallback: `${ASSETS}page_TyC_03.PNG` },
+      { key: 'terms-4', label: 'Lámina 4', fallback: `${ASSETS}page_TyC_04.PNG` },
     ],
   },
   {
@@ -22,7 +22,7 @@ export const SITE_IMAGE_GROUPS = [
     title: 'Inicio y marca',
     images: [
       { key: 'hero-logo', label: 'Logo principal · Gabee Nail Artist', fallback: `${ASSETS}Logo original.png` },
-      { key: 'bee-coin', label: 'Moneda de BeeCoins', fallback: `${ASSETS}Photoroom_20261028_151229_d08f9cc8.png` },
+      { key: 'bee-coin', label: 'Moneda de BeeCoins', fallback: `${ASSETS}BEECOINS.png` },
       { key: 'catbee-floating', label: 'Catbee flotante', fallback: `${ASSETS}gatobeja_transparent.png` },
       { key: 'catbee-chat', label: 'Avatar de Catbee en el chat', fallback: `${ASSETS}catbee_avatar.png` },
       { key: 'press-on-cover', label: 'Portada de Press On Nails', fallback: `${ASSETS}PRESS ON NAILS.jpeg` },
