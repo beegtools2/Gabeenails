@@ -2404,13 +2404,12 @@ export const UserAccountModal: React.FC<UserAccountModalProps> = ({
                     className="font-['Cinzel'] font-bold text-[#8C6B1C] underline hover:text-[#5D3704] cursor-pointer"
                   >
                     Ingresar aquí
-                  </button>
-      </div>
+     </button>
+     </div>
     </div>
   </form>
   </div>
-  </div>
-</div>
+</div>          
 
       {/* ============================================================== */}
       {/* MODAL PASARELA MANUAL DE RECARGA DE BEECOINS                  */}
