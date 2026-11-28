@@ -37,8 +37,10 @@ export const BeeCoinIcon: React.FC<BeeCoinIconProps> = ({ className = 'w-5 h-5',
         className="w-full h-full object-cover rounded-full bg-transparent border-0 shadow-none select-none pointer-events-none drop-shadow-xs"
         style={{ ...imgStyle, mixBlendMode: 'normal' }}
         onError={(e) => {
-          const legacy = '/assets/aistudio/Photoroom_20261027_174035_30f20142.png';
-          if (e.currentTarget.getAttribute('src') !== legacy) e.currentTarget.src = legacy;
+          const fallback = '/assets/aistudio/BEECOINS.png';
+          if (e.currentTarget.getAttribute('src') !== fallback) {
+            e.currentTarget.src = fallback;
+          }
         }}
       />
     </span>
