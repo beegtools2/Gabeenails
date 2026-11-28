@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { defaultSiteImage } from '../data/siteImages';
 
 interface GabeeLogoProps {
   className?: string;
@@ -16,13 +17,13 @@ export const GabeeLogo: React.FC<GabeeLogoProps> = ({
   variant = 'light',
 }) => {
   const isDark = variant === 'dark';
-  const originalSrc = '/assets/aistudio/LogoCentro_clean.png';
+  const originalSrc = encodeURI(defaultSiteImage('hero-logo'));
   const [logoSrc, setLogoSrc] = useState<string>(transparentLogoCache || originalSrc);
 
-  // Process image so white/near-white background seamlessly adopts landing page background
   useEffect(() => {
+    setLogoSrc(transparentLogoCache || originalSrc);
+
     if (transparentLogoCache) {
-      setLogoSrc(transparentLogoCache);
       return;
     }
 
@@ -40,25 +41,20 @@ export const GabeeLogo: React.FC<GabeeLogoProps> = ({
         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imgData.data;
 
-        // Scan pixels: turn white and near-white pixels transparent
-        // This ensures the logo perfectly takes the exact color of the landing page background
         for (let i = 0; i < data.length; i += 4) {
           const r = data[i];
           const g = data[i + 1];
           const b = data[i + 2];
 
-          // Calculate lightness and neutrality
           const maxVal = Math.max(r, g, b);
           const minVal = Math.min(r, g, b);
-          const isNeutral = (maxVal - minVal) < 26;
-          const brightness = (r * 0.299 + g * 0.587 + b * 0.114);
+          const isNeutral = maxVal - minVal < 26;
+          const brightness = r * 0.299 + g * 0.587 + b * 0.114;
 
           if (isNeutral && brightness > 215) {
             if (brightness >= 240) {
-              // Completely transparent: exact background shines through
               data[i + 3] = 0;
             } else {
-              // Smooth feathering on anti-aliased edges
               const factor = (240 - brightness) / (240 - 215);
               data[i + 3] = Math.round(data[i + 3] * Math.pow(factor, 1.2));
             }
@@ -70,9 +66,12 @@ export const GabeeLogo: React.FC<GabeeLogoProps> = ({
         transparentLogoCache = processedUrl;
         setLogoSrc(processedUrl);
       } catch (e) {
-        // Fallback: mix-blend-multiply handles blending seamlessly
-        console.warn('Canvas logo processing fallback to mix-blend-multiply', e);
+        console.warn('Canvas logo processing fallback to originalSrc', e);
+        setLogoSrc(originalSrc);
       }
+    };
+    img.onerror = () => {
+      setLogoSrc(originalSrc);
     };
     img.src = originalSrc;
   }, [originalSrc]);
@@ -106,7 +105,6 @@ export const GabeeLogo: React.FC<GabeeLogoProps> = ({
 
   return (
     <div className={`relative inline-flex items-center justify-center select-none ${sizeConfig.wrapperClass} ${className}`}>
-      {/* Ambient golden aura for lg/xl presentation on landing page */}
       {(size === 'lg' || size === 'xl') && !isDark && (
         <div className="absolute inset-0 bg-gradient-to-r from-[#DFBA68]/25 via-[#F2CFC7]/20 to-[#EAD6C9]/25 blur-2xl rounded-full -z-10 scale-110 pointer-events-none" />
       )}
@@ -117,6 +115,11 @@ export const GabeeLogo: React.FC<GabeeLogoProps> = ({
           alt="Gabee Nail Artist - Logo Oficial 3D"
           className={`${sizeConfig.imgClass} transition-transform duration-300`}
           loading="eager"
+          onError={(e) => {
+            if (e.currentTarget.src !== originalSrc) {
+              e.currentTarget.src = originalSrc;
+            }
+          }}
         />
       </div>
     </div>
