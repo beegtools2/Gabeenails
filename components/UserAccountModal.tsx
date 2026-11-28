@@ -1074,36 +1074,37 @@ export const UserAccountModal: React.FC<UserAccountModalProps> = ({
                 <div className="bg-[#FDFBF7] p-5 rounded-2xl border border-[#C5A059]/60 shadow-xs space-y-4">
                   <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
                     {/* --- DESDE AQUÍ REEMPLAZAS --- */}
-                    {/* Avatar with fallback to Gabee Studio logo */}
-                    <div className="relative group shrink-0">
-                      ...
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.HEIC,.heif,.HEIF,image/heic,image/heif"
-                        onChange={handleAvatarUpload}
-                        className="hidden"
-                      />
-                    </div>
-                    {/* --- HASTA AQUÍ REEMPLAZAS --- */}
-
-                    <div className="flex-1 text-center sm:text-left space-y-1">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="absolute bottom-0 right-0 p-1.5 rounded-full bg-[#FDFBF7] border border-[#C5A059] text-[#5D3704] hover:bg-[#F2E5D5] shadow-xs cursor-pointer transition-all"
-                        title="Subir o cambiar foto de perfil"
-                      >
-                        <Camera className="w-3.5 h-3.5 text-[#8C6B1C]" />
-                      </button>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.HEIC,.heif,.HEIF,image/heic,image/heif"
-                        onChange={handleAvatarUpload}
-                        className="hidden"
-                      />
-                    </div>
+                   {/* Avatar with fallback to Gabee Studio default bee logo */}
+<div className="relative group shrink-0">
+  <div className="w-20 h-20 rounded-full border-2 border-[#C5A059] overflow-hidden bg-[#FAF7F2] flex items-center justify-center shadow-sm">
+    <img
+      src={currentUser.avatarUrl || '/assets/aistudio/Logo_Abejita_Sin_Circulo_Gold.png'}
+      alt={currentUser.firstName || 'Foto de perfil'}
+      className="w-full h-full object-cover"
+      onError={(e) => {
+        const fallback = '/assets/aistudio/Logo_Abejita_Sin_Circulo_Gold.png';
+        if (e.currentTarget.getAttribute('src') !== fallback) {
+          e.currentTarget.src = fallback;
+        }
+      }}
+    />
+  </div>
+  <button
+    type="button"
+    onClick={() => fileInputRef.current?.click()}
+    className="absolute bottom-0 right-0 p-1.5 rounded-full bg-[#FDFBF7] border border-[#C5A059] text-[#5D3704] hover:bg-[#F2E5D5] shadow-xs cursor-pointer transition-all"
+    title="Subir o cambiar foto de perfil"
+  >
+    <Camera className="w-3.5 h-3.5 text-[#8C6B1C]" />
+  </button>
+  <input
+    ref={fileInputRef}
+    type="file"
+    accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.HEIC,.heif,.HEIF,image/heic,image/heif"
+    onChange={handleAvatarUpload}
+    className="hidden"
+  />
+</div>
 
                     <div className="flex-1 text-center sm:text-left space-y-1">
                       <div className="flex flex-wrap items-center justify-center sm:justify-between gap-2">
