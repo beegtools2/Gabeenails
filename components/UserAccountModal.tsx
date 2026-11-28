@@ -1070,19 +1070,24 @@ export const UserAccountModal: React.FC<UserAccountModalProps> = ({
                 {/* Social Card: Avatar, Name & VIP Badge */}
                 <div className="bg-[#FDFBF7] p-5 rounded-2xl border border-[#C5A059]/60 shadow-xs space-y-4">
                   <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                   {/* Social Card: Avatar, Name & VIP Badge */}
+                <div className="bg-[#FDFBF7] p-5 rounded-2xl border border-[#C5A059]/60 shadow-xs space-y-4">
+                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                    {/* --- DESDE AQUÍ REEMPLAZAS --- */}
                     {/* Avatar with fallback to Gabee Studio logo */}
                     <div className="relative group shrink-0">
-                      <div className="w-20 h-20 rounded-full border-2 border-[#C5A059] overflow-hidden bg-[#FAF7F2] flex items-center justify-center shadow-sm">
-                        {currentUser.avatarUrl ? (
-                          <img
-                            src={currentUser.avatarUrl}
-                            alt={currentUser.firstName}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <GabeeBeeMark size="md" className="scale-75" />
-                        )}
-                      </div>
+                      ...
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.HEIC,.heif,.HEIF,image/heic,image/heif"
+                        onChange={handleAvatarUpload}
+                        className="hidden"
+                      />
+                    </div>
+                    {/* --- HASTA AQUÍ REEMPLAZAS --- */}
+
+                    <div className="flex-1 text-center sm:text-left space-y-1">
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
